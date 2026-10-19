@@ -17,4 +17,14 @@ export class AuthRepositoryImpl implements AuthRepository {
   register(input: RegisterInput): Promise<Result<Registration>> {
     return guard(async () => M.registrationFromJson(obj(await call(this.t, { method: 'POST', path: '/auth/registro', body: M.registerToJson(input) }))), mapError);
   }
+  requestPasswordReset(email: string): Promise<Result<void>> {
+    return guard(async () => {
+      await call(this.t, { method: 'POST', path: '/auth/recuperar', body: { email } });
+    }, mapError);
+  }
+  resetPassword(token: string, newPassword: string): Promise<Result<void>> {
+    return guard(async () => {
+      await call(this.t, { method: 'POST', path: '/auth/restablecer', body: { token, password: newPassword } });
+    }, mapError);
+  }
 }

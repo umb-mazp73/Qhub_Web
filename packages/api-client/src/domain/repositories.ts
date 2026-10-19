@@ -9,6 +9,10 @@ export interface AuthRepository {
   login(identifier: string, password: string): Promise<Result<AuthToken>>;
   /** `POST /auth/registro`. */
   register(input: RegisterInput): Promise<Result<Registration>>;
+  /** `POST /auth/recuperar`. Responde igual exista o no el correo (anti-enumeración). */
+  requestPasswordReset(email: string): Promise<Result<void>>;
+  /** `POST /auth/restablecer` con el token del enlace del correo. */
+  resetPassword(token: string, newPassword: string): Promise<Result<void>>;
 }
 
 export interface QueueRepository {

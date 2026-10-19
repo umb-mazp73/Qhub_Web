@@ -5,6 +5,8 @@ import { resolveRedirect } from './resolve-redirect';
 import { LoginPage } from '@/features/auth/LoginPage';
 const SetupPage = lazy(() => import('@/features/auth/SetupPage').then((m) => ({ default: m.SetupPage })));
 const ConnectPage = lazy(() => import('@/features/qhub/ConnectPage').then((m) => ({ default: m.ConnectPage })));
+const QhubRequestResetPage = lazy(() => import('@/features/qhub/QhubRequestResetPage').then((m) => ({ default: m.QhubRequestResetPage })));
+const QhubResetPasswordPage = lazy(() => import('@/features/qhub/QhubResetPasswordPage').then((m) => ({ default: m.QhubResetPasswordPage })));
 const AppShell = lazy(() => import('@/features/shell/AppShell').then((m) => ({ default: m.AppShell })));
 const QueuesPage = lazy(() => import('@/features/queues/QueuesPage').then((m) => ({ default: m.QueuesPage })));
 const QueueEditPage = lazy(() => import('@/features/queues/QueueEditPage').then((m) => ({ default: m.QueueEditPage })));
@@ -61,6 +63,8 @@ export function AppRoutes() {
         <Route path="/connect" element={<ConnectPage />} />
         <Route path="/invitacion" element={<InvitationPage />} />
         <Route path="/restablecer" element={<ResetPasswordPage />} />
+        <Route path="/qhub/recuperar" element={<QhubRequestResetPage />} />
+        <Route path="/qhub/restablecer" element={<QhubResetPasswordPage />} />
         <Route path="/verificacion" element={<MfaChallengePage />} />
         <Route element={<AppShell />}>
           <Route path="/inicio" element={<HomePage />} />

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { unwrap, validateOrgName } from '@qhub/core';
 import { isReady } from '@qhub/api-client';
@@ -11,6 +12,7 @@ export function SettingsPage() {
   const { staff, health, qhubLink } = useContainer();
   const { session } = useSession();
   const toast = useToast();
+  const navigate = useNavigate();
   const org = session.membership!.organization;
   const personal = org.kind === 'persona';
   const space = personal ? 'tu cuenta' : 'tu organización';
@@ -98,7 +100,7 @@ export function SettingsPage() {
           </div>
         </Panel>
       </div>
-      {dialog === 'connect' && <CredentialsDialog title="Conectar tu cuenta de Qhub" intro="Lo haces una sola vez: validamos tu cuenta, la guardamos en el servidor y después entras directo." confirmLabel="Conectar y publicar" onSubmit={connectAndPublish} onCancel={() => setDialog(null)} />}
+      {dialog === 'connect' && <CredentialsDialog title="Conectar tu cuenta de Qhub" intro="Lo haces una sola vez: validamos tu cuenta, la guardamos en el servidor y después entras directo." confirmLabel="Conectar y publicar" onSubmit={connectAndPublish} onCancel={() => setDialog(null)} onForgot={() => navigate('/qhub/recuperar')} onRegister={() => navigate('/connect')} />}
       {dialog === 'unpublish' && <ConfirmDialog title="Dejar de publicar" message={`El público dejará de ver ${space}. Los turnos ya sacados se conservan.`} confirmLabel="Dejar de publicar" danger={false} onCancel={() => setDialog(null)} onConfirm={() => void unpublish()} />}
       {dialog === 'forget' && <ConfirmDialog title="Olvidar la conexión guardada" message={`La próxima vez tendrás que conectar tu cuenta de Qhub otra vez y ${space} dejará de verse en la app móvil.`} confirmLabel="Olvidar conexión" onCancel={() => setDialog(null)} onConfirm={() => void forget()} />}
     </div>

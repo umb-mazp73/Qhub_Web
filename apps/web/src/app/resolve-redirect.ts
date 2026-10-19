@@ -8,6 +8,11 @@ export function resolveRedirect(o: {
 }): string | null {
   const entry = ['/login', '/setup', '/connect', '/cargando', '/', '/verificacion'];
   const here = o.location;
+  // Fix #3 (HIGH): el destinatario del correo de reset de Qhub llega ANÓNIMO. Estas rutas
+  // son públicas y el chequeo va ANTES del guardado !signedIn (que si no, lo expulsa a
+  // /login). Se normaliza el query string porque el enlace es /qhub/restablecer?token=...
+  const path = here.split('?')[0];
+  if (path === '/qhub/recuperar' || path === '/qhub/restablecer') return null;
   if (o.authLoading || (o.signedIn && o.mfa === 'checking')) return null;
   if (!o.signedIn) return here === '/login' ? null : '/login';
   if (o.mfa === 'required') return here === '/verificacion' ? null : '/verificacion';

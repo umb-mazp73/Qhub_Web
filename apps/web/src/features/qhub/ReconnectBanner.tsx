@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button, Icon, useToast } from '@/shared/ui';
 import { useSession } from '@/app/container';
 import { CredentialsDialog } from './CredentialsDialog';
@@ -10,6 +11,7 @@ import { CredentialsDialog } from './CredentialsDialog';
 export function ReconnectBanner() {
   const { session, connection } = useSession();
   const toast = useToast();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const needed = !!session.membership?.organization.qhubConnected && connection.status === 'disconnected';
   if (!needed && !open) return null;       // la ventana sigue abierta mientras se conecta (el estado pasa por «conectando»)
@@ -34,7 +36,8 @@ export function ReconnectBanner() {
       <Button size="sm" onClick={() => setOpen(true)}>Reconectar</Button>
     </div>}
       {open && <CredentialsDialog title="Reconectar con Qhub" intro="Escribe tu cuenta de Qhub. Guardamos la conexión para que no te la volvamos a pedir." confirmLabel="Conectar"
-        rememberLabel="Guardar la conexión (solo la escribes esta vez)" onSubmit={connect} onCancel={() => setOpen(false)} />}
+        rememberLabel="Guardar la conexión (solo la escribes esta vez)" onSubmit={connect} onCancel={() => setOpen(false)}
+        onForgot={() => navigate('/qhub/recuperar')} onRegister={() => navigate('/connect')} />}
     </>
   );
 }

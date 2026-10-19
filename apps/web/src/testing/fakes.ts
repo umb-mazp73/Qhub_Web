@@ -146,6 +146,18 @@ export class FakeAuthRepository implements AuthRepository {
     this.registrations.push(i);
     return ok({ accountType: i.accountType, accountId: 'acc1', username: i.username, email: i.email, companyName: i.companyName ?? null, queueLimit: 6, createdAt: new Date() });
   }
+  resetRequests: string[] = [];
+  resets: Array<{ token: string; password: string }> = [];
+  requestResetFailure: Failure | null = null;
+  resetFailure: Failure | null = null;
+  async requestPasswordReset(email: string): Promise<Result<void>> {
+    this.resetRequests.push(email);
+    return this.requestResetFailure ? err(this.requestResetFailure) : ok(undefined);
+  }
+  async resetPassword(token: string, password: string): Promise<Result<void>> {
+    this.resets.push({ token, password });
+    return this.resetFailure ? err(this.resetFailure) : ok(undefined);
+  }
 }
 
 export const makeQueue = (id: string, name: string, active = true): Queue => ({ id, ownerName: 'Notaría 12', name, description: null, active });
