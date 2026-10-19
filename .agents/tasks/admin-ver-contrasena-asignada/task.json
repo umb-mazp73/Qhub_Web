@@ -1,7 +1,0 @@
-{
-  "task_id": "task-admin-ver-contrasena-asignada",
-  "task_description": "Permitir que un administrador vea la contraseña INICIAL ASIGNADA (cifrada en reposo con CLAVE_INICIAL_KEY) de cualquier miembro de su organizacion, reusando el cifrado existente y la Edge Function qhub-clave. Limite duro: solo la contrasena asignada al invitar; si el miembro la cambio por Supabase Auth es un hash de una via y NO se puede mostrar.",
-  "status": "completed",
-  "feature_order": ["FEAT-001", "FEAT-002"],
-  "blocked_reason": null
-}
