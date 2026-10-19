@@ -105,6 +105,8 @@ export class FakeStaffRepository implements StaffRepository {
   async memberProfile(_o: string, userId: string): Promise<Result<MemberProfile>> { this.calls.push(`memberProfile:${userId}`); const p = this.memberProfiles[userId]; return p ? ok({ ...p }) : err(notFoundFailure('No encontramos a esa persona en tu equipo.')); }
   async editMember(_o: string, userId: string, p: { firstName: string; lastName: string; position: string; phone: string }): Promise<Result<void>> { this.calls.push(`editMember:${userId}:${p.firstName}:${p.lastName}:${p.position}`); return ok(undefined); }
   async removeMember(_o: string, userId: string): Promise<Result<void>> { this.calls.push(`removeMember:${userId}`); return ok(undefined); }
+  memberInitialPasswords: Record<string, string> = {};
+  async memberInitialPassword(_o: string, userId: string): Promise<Result<string | null>> { this.calls.push(`memberInitialPassword:${userId}`); return ok(this.memberInitialPasswords[userId] ?? null); }
   requests: MemberRequest[] = [];
   permission: MyPermission | null = null;
   async requestChange(_o: string, type: RequestType, reason: string): Promise<Result<void>> { this.calls.push(`requestChange:${type}:${reason}`); this.permission = { status: 'pendiente', expiresAt: null }; return ok(undefined); }

@@ -34,6 +34,7 @@ export function TeamPage() {
   const [shown, setShown] = useState<Set<string>>(new Set());     // códigos de invitación a la vista (por defecto censurados)
   const [editing, setEditing] = useState<Member | null>(null);
   const [removing, setRemoving] = useState<Member | null>(null);
+  const [assigned, setAssigned] = useState<{ name: string; password: string | null } | null>(null);
   const [working, setWorking] = useState<string | null>(null);
   const toggleShown = (id: string) => setShown((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
@@ -85,6 +86,14 @@ export function TeamPage() {
   async function answer(id: string, approve: boolean) {
     const r = await staff.respondRequest(id, approve);
     if (r.ok) { void qc.invalidateQueries({ queryKey: ['member-requests', orgId] }); void qc.invalidateQueries({ queryKey: ['request-history', orgId] }); toast.show(approve ? 'Solicitud aprobada. Le avisamos a la persona.' : 'Solicitud rechazada. Le avisamos a la persona.'); } else toast.show(r.failure.message, { error: true });
+  }
+
+  async function viewPassword(m: Member) {
+    setWorking(m.userId);
+    const r = await staff.memberInitialPassword(orgId, m.userId);
+    setWorking(null);
+    if (!r.ok) { toast.show(r.failure.message, { error: true }); return; }
+    setAssigned({ name: m.name, password: r.value });
   }
 
   async function change(userId: string, patch: { role?: OrgRole; active?: boolean }) {
@@ -173,6 +182,7 @@ export function TeamPage() {
                       <span className="t-caption">Acceso</span>
                     </label>
                     {canManage && !self ? <span className="flex items-center justify-end gap-1">
+                      <Button kind="tertiary" size="sm" loading={working === m.userId} onClick={() => void viewPassword(m)}>Ver contraseña</Button>
                       <Button kind="tertiary" size="sm" onClick={() => setEditing(m)}>Editar</Button>
                       <IconButton icon="trash" label={`Quitar a ${m.name} del equipo`} onClick={() => setRemoving(m)} />
                     </span> : <span />}
@@ -211,6 +221,17 @@ export function TeamPage() {
               <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0 font-mono">{credentials.password}</dd>
             </dl>
             <div><Button kind="secondary" icon="copy" onClick={async () => { await navigator.clipboard?.writeText(`Correo: ${credentials.email}\nContraseña: ${credentials.password}`); toast.show('Datos copiados.'); }}>Copiar datos</Button></div>
+          </div>
+        </Dialog>}
+        {assigned && <Dialog title={`Contraseña asignada de ${assigned.name}`} onClose={() => setAssigned(null)} actions={<Button onClick={() => setAssigned(null)}>Listo</Button>}>
+          <div className="flex flex-col gap-3">
+            <Notice kind="warning" title="Es la contraseña inicial que asignaste." message="Puede estar desactualizada si la persona ya la cambió. Compártela solo por un canal seguro." />
+            {assigned.password !== null ? <>
+              <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border border-border-subtle bg-layer-02 p-4">
+                <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0 font-mono">{assigned.password}</dd>
+              </dl>
+              <div><Button kind="secondary" icon="copy" onClick={async () => { await navigator.clipboard?.writeText(assigned.password!); toast.show('Contraseña copiada.'); }}>Copiar contraseña</Button></div>
+            </> : <p className="m-0 text-text-secondary">Este miembro no tiene una contraseña asignada visible (quizá la cambió). Puedes restablecerla.</p>}
           </div>
         </Dialog>}
         {editing && <EditMemberDialog member={editing} orgId={orgId} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void qc.invalidateQueries({ queryKey: ['members', orgId] }); toast.show('Perfil actualizado.'); }} />}

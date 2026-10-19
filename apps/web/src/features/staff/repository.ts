@@ -59,6 +59,8 @@ export interface TeamPort {
   spendPasswordPermission(orgId: string): Promise<Result<boolean>>;
   /** Termina su pertenencia al equipo; no borra la cuenta de la persona. */
   removeMember(orgId: string, userId: string): Promise<Result<void>>;
+  /** La contraseña inicial que el administrador asignó a este miembro (si sigue disponible cifrada). Puede estar desactualizada si la persona la cambió. */
+  memberInitialPassword(orgId: string, userId: string): Promise<Result<string | null>>;
 }
 
 export interface QueueLabelPort {

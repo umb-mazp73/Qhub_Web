@@ -204,6 +204,14 @@ export class SupabaseStaffRepository implements StaffRepository {
       return r.value?.clave ?? null;
     });
   }
+  memberInitialPassword(orgId: string, userId: string): Promise<Result<string | null>> {
+    // Método espejo de `initialPassword`: la clave vive cifrada en reposo y `qhub-clave` autoriza al admin y descifra. `200 { clave: null }` -> ok(null).
+    return this.run(async () => {
+      const r = await invokeFunction<{ clave: string | null }>(this.sb, 'qhub-clave', { orgId, userId });
+      if (!r.ok) throw r.failure;
+      return r.value?.clave ?? null;
+    });
+  }
   previewInvitation(token: string) {
     return this.run(async (): Promise<InvitationPreview> => {
       const rows = await this.q<Row[]>(this.sb.rpc('ver_invitacion', { p_token: token.trim() }) as unknown as PromiseLike<{ data: Row[]; error: unknown }>);
