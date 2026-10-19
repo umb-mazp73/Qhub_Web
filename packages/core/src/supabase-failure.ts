@@ -11,7 +11,7 @@ export function failureFromSupabase(e: unknown): Failure {
   if (x?.name === 'AuthApiError' || x?.name === 'AuthError' || (x?.name ?? '').startsWith('Auth')) {
     // El disparador de la base (equipo gestionado) bloquea el cambio y Auth lo reporta como error al actualizar el usuario.
     if (m.includes('database error updating user') || m.includes('aprobación de tu administrador') || m.includes('gestiona tu administrador')) return forbiddenFailure('Esto necesita la aprobación de tu administrador. Envíale una solicitud desde Mi perfil.');
-    if (m.includes('invalid login') || m.includes('invalid credentials')) return unauthorizedFailure('Correo o contraseña incorrectos.');
+    if (m.includes('invalid login') || m.includes('invalid credentials')) return unauthorizedFailure('Correo o contraseña incorrectos. Si aún no tienes cuenta, crea una.');
     if (m.includes('already registered') || m.includes('already been registered')) return conflictFailure('Ese correo ya está registrado. Inicia sesión o recupera tu contraseña.');
     if (m.includes('email not confirmed')) return badRequestFailure('Confirma tu correo antes de entrar. Revisa tu bandeja.');
     if (m.includes('totp') || m.includes('mfa') && m.includes('code')) return validationFailure('El código no es correcto o ya venció. Prueba con el siguiente.');

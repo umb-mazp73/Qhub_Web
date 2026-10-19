@@ -7,7 +7,7 @@ const kind = (e: unknown) => failureFromSupabase(e).kind;
 describe('failureFromSupabase', () => {
   it('deja pasar un Failure tal cual', () => { const f = unauthorizedFailure(); expect(failureFromSupabase(f)).toBe(f); });
   it('traduce los errores de autenticación', () => {
-    expect(failureFromSupabase(auth('Invalid login credentials')).message).toBe('Correo o contraseña incorrectos.');
+    expect(failureFromSupabase(auth('Invalid login credentials')).message).toBe('Correo o contraseña incorrectos. Si aún no tienes cuenta, crea una.');
     expect(kind(auth('User already registered'))).toBe('conflict');
     expect(failureFromSupabase(auth('User already registered')).message).toBe('Ese correo ya está registrado. Inicia sesión o recupera tu contraseña.');
     expect(kind(auth('Email not confirmed'))).toBe('bad_request');
