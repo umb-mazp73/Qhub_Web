@@ -69,6 +69,7 @@ export function QhubResetPasswordPage() {
               <GeneratePassword onGenerate={(p) => { setPw(p); setAgain(p); }} />
               <TextField label="Repite la contraseña" type="password" revealable value={again} onChange={(e) => setAgain(e.target.value)} error={errs.again} autoComplete="new-password" large />
               <Button type="submit" size="lg" block icon="check" loading={busy}>Guardar contraseña</Button>
+              <Link to="/login" className="text-center">Volver al inicio de sesión</Link>
             </form>
           )}
         </Panel>

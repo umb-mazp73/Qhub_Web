@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Failure } from '@qhub/core';
 import { validateEmail } from '@qhub/core';
 import { Button, EmailField, Logo, Notice, Panel } from '@/shared/ui';
@@ -8,6 +9,7 @@ import { useContainer } from '@/app/container';
  * anónimo (no hay sesión del panel); por eso usa `auth` directo y no `useSession()`. */
 export function QhubRequestResetPage() {
   const { auth } = useContainer();
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [fieldErr, setFieldErr] = useState<string | null>(null);
   const [error, setError] = useState<Failure | null>(null);
@@ -35,6 +37,7 @@ export function QhubRequestResetPage() {
               <Logo height={28} />
               <Notice kind="success" title="Revisa tu correo"
                 message="Si el correo está registrado en Qhub, te enviamos un enlace para elegir una contraseña nueva. Revisa también el spam." />
+              <Button kind="tertiary" size="lg" block icon="chevron-left" onClick={() => navigate(-1)}>Volver</Button>
             </div>
           ) : (
             <form className="flex flex-col gap-4" onSubmit={(e) => void submit(e)} noValidate aria-label="Recuperar contraseña">
@@ -46,6 +49,7 @@ export function QhubRequestResetPage() {
               {error && <Notice kind="error" title={error.message} />}
               <EmailField label="Correo de tu cuenta de Qhub" value={email} onValueChange={setEmail} error={fieldErr} autoComplete="email" large />
               <Button type="submit" size="lg" block icon="arrow-right" loading={busy}>Enviar enlace</Button>
+              <Button kind="tertiary" size="lg" block icon="chevron-left" onClick={() => navigate(-1)}>Volver</Button>
             </form>
           )}
         </Panel>

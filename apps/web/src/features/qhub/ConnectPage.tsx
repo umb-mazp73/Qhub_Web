@@ -85,9 +85,9 @@ export function ConnectPage() {
               </>
             ) : (
               <>
-                <div className="flex items-start gap-2">
-                  <div className="flex-1"><TextField label="Nombre" value={reg.first} onChange={set('first')} error={errs.first} /></div>
-                  <div className="flex-1"><TextField label="Apellido" value={reg.last} onChange={set('last')} error={errs.last} /></div>
+                <div className="grid grid-cols-1 items-start gap-2 sm:grid-cols-2">
+                  <TextField label="Nombre" value={reg.first} onChange={set('first')} error={errs.first} />
+                  <TextField label="Apellido" value={reg.last} onChange={set('last')} error={errs.last} />
                 </div>
                 <TextField label="Usuario de Qhub" value={reg.user} onChange={set('user')} error={errs.user} />
                 <EmailField label="Correo" value={reg.mail} onValueChange={(v) => setReg((r) => ({ ...r, mail: v }))} error={errs.mail} />
