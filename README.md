@@ -21,8 +21,8 @@ Es un monorepo con **npm workspaces**, así los imports `@qhub/*` resuelven sin 
 
 ## Variables de entorno
 
-Todas son **públicas** (`VITE_*`, van en el bundle). Copia `.env.example` a `.env` y
-rellena los valores. En Vercel se configuran en *Project Settings → Environment Variables*.
+Todas son **públicas** (`VITE_*`, van en el bundle). Ponlas en el `.env` de la raíz
+(gitignored). En Vercel se configuran en *Project Settings → Environment Variables*.
 
 | Variable | Qué es |
 | --- | --- |
@@ -65,5 +65,5 @@ O todo de una con `tool/verify.sh` (lee las `VITE_*` de tu `.env`).
 - **Output Directory:** `apps/web/dist`
 - **Rewrites:** todas las rutas → `/index.html` (para React Router)
 
-En Vercel: crea el proyecto apuntando a este repo, añade las 5 variables `VITE_*` del
-`.env.example` en *Environment Variables* y despliega.
+En Vercel: crea el proyecto apuntando a este repo, añade las 5 variables `VITE_*`
+en *Environment Variables* y despliega.
