@@ -1,0 +1,23 @@
+name: qhub_web
+
+# `docker compose up -d --build` → plataforma web de producción (nginx) en http://localhost:8080
+# Las variables públicas salen del .env de la raíz (compose lo lee solo) y se incrustan en el build.
+services:
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+      args:
+        VITE_APP_ENV: ${VITE_APP_ENV:-production}
+        VITE_QHUB_API_BASE_URL: ${VITE_QHUB_API_BASE_URL:?falta VITE_QHUB_API_BASE_URL en .env}
+        VITE_QHUB_WS_BASE_URL: ${VITE_QHUB_WS_BASE_URL:?falta VITE_QHUB_WS_BASE_URL en .env}
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:?falta VITE_SUPABASE_URL en .env}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${VITE_SUPABASE_PUBLISHABLE_KEY:?falta VITE_SUPABASE_PUBLISHABLE_KEY en .env}
+    image: qhub_web/web
+    restart: unless-stopped
+    ports: ["127.0.0.1:8080:80"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
