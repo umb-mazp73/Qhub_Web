@@ -1,0 +1,195 @@
+/* // GENERADO por scripts/generate.mjs desde tokens/tokens.json y assets/. No editar a mano. */
+@theme inline {
+  --color-brand-indigo: var(--brand-indigo);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-mint: var(--brand-mint);
+  --color-neutral-10: var(--neutral-10);
+  --color-neutral-20: var(--neutral-20);
+  --color-neutral-50: var(--neutral-50);
+  --color-neutral-70: var(--neutral-70);
+  --color-neutral-90: var(--neutral-90);
+  --color-background: var(--background);
+  --color-layer-01: var(--layer-01);
+  --color-layer-02: var(--layer-02);
+  --color-layer-hover: var(--layer-hover);
+  --color-layer-selected: var(--layer-selected);
+  --color-field: var(--field);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-placeholder: var(--text-placeholder);
+  --color-text-disabled: var(--text-disabled);
+  --color-text-on-color: var(--text-on-color);
+  --color-text-on-accent: var(--text-on-accent);
+  --color-interactive: var(--interactive);
+  --color-interactive-hover: var(--interactive-hover);
+  --color-interactive-active: var(--interactive-active);
+  --color-link: var(--link);
+  --color-link-on-ink: var(--link-on-ink);
+  --color-error-on-ink: var(--error-on-ink);
+  --color-focus: var(--focus);
+  --color-focus-inset: var(--focus-inset);
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-sidebar-active: var(--sidebar-active);
+  --color-sidebar-text: var(--sidebar-text);
+  --color-sidebar-text-active: var(--sidebar-text-active);
+  --color-state-waiting: var(--state-waiting);
+  --color-state-waiting-text: var(--state-waiting-text);
+  --color-state-serving: var(--state-serving);
+  --color-state-serving-text: var(--state-serving-text);
+  --color-state-done: var(--state-done);
+  --color-state-done-text: var(--state-done-text);
+  --color-state-cancelled: var(--state-cancelled);
+  --color-state-cancelled-text: var(--state-cancelled-text);
+  --color-state-noshow: var(--state-noshow);
+  --color-state-noshow-text: var(--state-noshow-text);
+  --color-support-error: var(--support-error);
+  --color-support-success: var(--support-success);
+  --color-support-warning: var(--support-warning);
+  --color-support-info: var(--support-info);
+  --color-overlay: var(--overlay);
+  --color-skeleton-bg: var(--skeleton-bg);
+  --color-skeleton-shine: var(--skeleton-shine);
+  --font-sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", Menlo, Consolas, monospace;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --shadow-overlay: var(--shadow-overlay);
+}
+
+@utility t-display {
+  font-family: var(--font-sans);
+  font-size: 54px;
+  line-height: 64px;
+  font-weight: 300;
+  letter-spacing: -0.5px;
+}
+@utility t-h1 {
+  font-family: var(--font-sans);
+  font-size: 32px;
+  line-height: 40px;
+  font-weight: 400;
+  letter-spacing: 0px;
+}
+@utility t-h2 {
+  font-family: var(--font-sans);
+  font-size: 28px;
+  line-height: 36px;
+  font-weight: 400;
+  letter-spacing: 0px;
+}
+@utility t-h3 {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 400;
+  letter-spacing: 0px;
+}
+@utility t-h4 {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  letter-spacing: 0px;
+}
+@utility t-body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  letter-spacing: 0.16px;
+}
+@utility t-body-long {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+  letter-spacing: 0px;
+}
+@utility t-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  letter-spacing: 0.32px;
+}
+@utility t-caption {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  letter-spacing: 0.32px;
+}
+@utility t-turn-xl {
+  font-family: var(--font-mono);
+  font-size: 64px;
+  line-height: 72px;
+  font-weight: 500;
+  letter-spacing: 0px;
+}
+@utility t-turn {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 500;
+  letter-spacing: 0px;
+}
+@utility t-code {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  letter-spacing: 0px;
+}
+@utility t-code-sm {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 400;
+  letter-spacing: 0px;
+}
+
+@utility h-control-sm {
+  height: 32px;
+}
+@utility min-h-control-sm {
+  min-height: 32px;
+}
+@utility w-control-sm {
+  width: 32px;
+}
+@utility h-control-md {
+  height: 40px;
+}
+@utility min-h-control-md {
+  min-height: 40px;
+}
+@utility w-control-md {
+  width: 40px;
+}
+@utility h-control-lg {
+  height: 48px;
+}
+@utility min-h-control-lg {
+  min-height: 48px;
+}
+@utility w-control-lg {
+  width: 48px;
+}
+@utility h-header {
+  height: 48px;
+}
+@utility w-sidebar {
+  width: 256px;
+}
+@utility w-sidebar-collapsed {
+  width: 48px;
+}
+@utility h-row {
+  height: 48px;
+}
+@utility min-h-row {
+  min-height: 48px;
+}

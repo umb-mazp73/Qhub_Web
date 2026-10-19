@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+@import '@qhub/design/src/tokens.css';
+@import '@qhub/design/src/tailwind.css';
+
+/* Los estilos son utilidades de Tailwind sobre los tokens del design system (nunca hex sueltos). */
+@layer base {
+  html, body, #root { height: 100%; }
+  body { @apply bg-background text-text-primary font-sans text-[14px] leading-5 antialiased; letter-spacing: 0.16px; }
+  :focus-visible { outline: 2px solid var(--focus); outline-offset: 0; }
+  a { @apply text-link; }
+  select { appearance: none; }
+  /* La lista desplegable nativa debe seguir el tema (si no, queda blanca con texto gris en oscuro). */
+  select, option { background-color: var(--layer-01); color: var(--text-primary); }
+  select:disabled { color: var(--text-disabled); }
+}
+
+@keyframes toast-bar { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.toast-bar { animation: toast-bar linear forwards; }
+.toast:hover .toast-bar, .toast:focus-within .toast-bar { animation-play-state: paused; }
+@keyframes live-pulse { from { opacity: 0.4; } to { opacity: 1; } }
+@keyframes skeleton-shine { from { background: var(--skeleton-bg); } to { background: var(--skeleton-shine); } }
+@utility animate-live { animation: live-pulse 1.2s ease-in-out infinite alternate; }
+@utility animate-shine { animation: skeleton-shine 1.4s ease-in-out infinite alternate; }
+@media (prefers-reduced-motion: reduce) { .animate-live, .animate-shine { animation: none; } }
+
+/* Preferencias de accesibilidad (atributos en <html>, ver app/preferences.ts). Solo reasignan tokens existentes. */
+:root[data-text='large'] body { zoom: 1.15; }
+:root[data-motion='reduce'] *, :root[data-motion='reduce'] *::before, :root[data-motion='reduce'] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+:root[data-contrast='more'] { --border-subtle: var(--border-strong); --text-secondary: var(--text-primary); --text-placeholder: var(--text-secondary); }
+:root[data-contrast='more'] :focus-visible { outline-width: 3px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+
+/* Logo: la versión para fondo claro y la negativa se alternan con el mismo criterio que los tokens de color. */
+:root[data-theme='dark'] .qh-logo-light { display: none; }
+:root[data-theme='dark'] .qh-logo-dark { display: inline-flex; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .qh-logo-light { display: none; }
+  :root:not([data-theme='light']) .qh-logo-dark { display: inline-flex; }
+}

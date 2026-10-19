@@ -1,0 +1,5 @@
+# Toolchain Node para typecheck / test / build de web y móvil.
+FROM node:22-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates python3 && rm -rf /var/lib/apt/lists/*
+ENV NODE_OPTIONS=--dns-result-order=ipv4first npm_config_update_notifier=false npm_config_fund=false npm_config_audit=false
+WORKDIR /workspace
