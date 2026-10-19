@@ -95,6 +95,9 @@ export function LoginPage() {
             </>
           )}
           <Button type="submit" size="lg" block icon="arrow-right" loading={busy}>{mode === 'register' ? 'Crear cuenta' : mode === 'forgot' ? 'Enviar enlace' : 'Continuar'}</Button>
+          {mode !== 'login' && (
+            <Button kind="tertiary" size="lg" block icon="chevron-left" onClick={() => go('login')}>Volver a iniciar sesión</Button>
+          )}
           {mode === 'login' && (
             <>
               <div className="-mt-1">{link('¿Olvidaste tu contraseña?', 'forgot')}</div>

@@ -3,6 +3,8 @@ import { routeAllowed, type OrgRole } from '@/features/staff';
 /** A dónde va el usuario según su estado. Pura y testeable. `null` = se queda donde está (también mientras carga). */
 export function resolveRedirect(o: {
   location: string; authLoading: boolean; signedIn: boolean; membershipsLoading: boolean; hasOrganization: boolean; role: OrgRole | null; connected: boolean; mfa?: 'checking' | 'ok' | 'required';
+  /** No se pudieron cargar las organizaciones (error de red/permiso), distinto de "no tiene ninguna". */
+  membershipsError?: boolean;
   /** Hay una invitación por aceptar (llegó por el botón del correo). */
   pendingInvitation?: boolean;
 }): string | null {
@@ -22,6 +24,9 @@ export function resolveRedirect(o: {
   if (!o.signedIn) return path === '/login' ? null : '/login';
   if (o.mfa === 'required') return path === '/verificacion' ? null : '/verificacion';
   if (o.membershipsLoading) return null;
+  // Si NO se pudieron cargar las organizaciones (error de red/permiso, no "cero organizaciones"),
+  // no mandamos a /setup como si no tuviera ninguna: se queda donde está para reintentar/avisar.
+  if (o.membershipsError) return null;
   if (path === '/verificacion') return '/inicio';
   if (path === '/invitacion') return null;                           // se acepta con o sin organización, y antes de conectar con Qhub
   if (o.pendingInvitation && (entry.includes(path) || !o.hasOrganization)) return '/invitacion';

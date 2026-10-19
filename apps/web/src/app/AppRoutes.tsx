@@ -40,6 +40,7 @@ function Gate() {
     authLoading: auth.status === 'loading',
     signedIn,
     membershipsLoading: memberships.status === 'loading',
+    membershipsError: memberships.status === 'error',
     hasOrganization: session.membership !== null,
     role: session.membership?.role ?? null,
     // Con la conexión ya confirmada (registro en la base de datos) no se muestra la pantalla de conectar, aunque falte el token:
