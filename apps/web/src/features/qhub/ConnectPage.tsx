@@ -74,7 +74,11 @@ export function ConnectPage() {
             <Logo height={28} />
             <div><h1 className="t-h2">Conecta {org} con Qhub</h1><p className="text-text-secondary">{personal ? 'Usa tu cuenta Qhub personal para gestionar tus colas y turnos en vivo.' : 'Usa la cuenta Qhub de tu organización para gestionar colas y turnos en vivo.'}</p></div>
             <Tabs labels={['Ya tengo cuenta', 'Crear cuenta']} index={tab} onChange={(i) => { setTab(i); setError(null); setErrs({}); }} />
-            {(error ?? reason) && <Notice kind="error" title={(error ?? reason)!.message} />}
+            {(error ?? reason) && <Notice kind="error" title={(error ?? reason)!.message}
+              message={tab === 0 && (error ?? reason)!.kind === 'unauthorized' ? 'Revisa tu correo/usuario y contraseña de Qhub.' : undefined}
+              action={tab === 0 && (error ?? reason)!.kind === 'unauthorized'
+                ? <a href="#" onClick={(ev) => { ev.preventDefault(); setTab(1); setError(null); setErrs({}); }}>¿No tienes cuenta? Crea una</a>
+                : undefined} />}
             {!canSave && <Notice kind="info" title="Un administrador debe conectar la cuenta con Qhub." message="Cuando lo haga, entrarás directo sin escribir nada." />}
             <Checkbox checked={remember} onChange={(e) => setRemember(e.target.checked)} label="Guardar la conexión: solo lo haces una vez y la próxima vez entras directo" />
             {tab === 0 ? (
