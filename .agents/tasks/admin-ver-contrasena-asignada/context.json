@@ -1,0 +1,31 @@
+{
+  "project_type": "Cross-repo. Web: monorepo npm workspaces (React 19 + Vite + TanStack Query + Tailwind v4) en /home/miguelzambrano/projects/Qhub_Web. Backend: Supabase Edge Functions (Deno/TypeScript) + migraciones SQL en /home/miguelzambrano/projects/Qhub_App/supabase.",
+  "language": "TypeScript (web + Deno), SQL (plpgsql) para migraciones Supabase.",
+  "build_system": "Web: npm workspaces; raiz /home/miguelzambrano/projects/Qhub_Web. El host tiene Node v22.23.3 + npm 10.9.9 y Docker, asi que los comandos npm corren directo sin Docker. tool/verify.sh los corre dentro de node:22-slim si se prefiere. Supabase: archivos .sql versionados; la tarea deno es 'deno test --allow-none _shared/'.",
+  "test_framework": "Web: vitest (npm run test -w @qhub/web). Edge: deno test sobre _shared/ (solo logica pura, sin red).",
+  "build_command": "cd /home/miguelzambrano/projects/Qhub_Web && npm run build",
+  "test_command": "cd /home/miguelzambrano/projects/Qhub_Web && npm run typecheck && npm run test --workspaces --if-present",
+  "verification_instructions": "Web: desde /home/miguelzambrano/projects/Qhub_Web correr 'npm run typecheck', 'npm run test -w @qhub/web' y 'npm run build' (o tool/verify.sh para todo en contenedor). Edge/SQL: Deno y Supabase CLI NO estan instalados en el host, asi que las pruebas Deno y las migraciones SQL NO se pueden ejecutar localmente; verificar por revision de codigo y consistencia con los patrones existentes. La migracion SQL debe aplicarse por despliegue/Supabase CLI o SQL editor.",
+  "snapshot_or_generated_files": "El design system se genera con 'npm run generate -w @qhub/design' (lo hace 'npm run build' automaticamente). No hay otros archivos generados que se commiteen para esta tarea.",
+  "environment_constraints": "Deno NO instalado (no se pueden correr pruebas Deno ni 'deno check'). Supabase CLI no corriendo (no se aplican migraciones localmente). Node/npm/Docker SI disponibles. El cwd de los agentes es /home/miguelzambrano/projects/Qhub_Web; usar SIEMPRE rutas absolutas para el repo Qhub_App.",
+  "contribution_requirements": "Mantener todo el texto de UI en espanol. No romper: el Dialog 'credentials' de invitacion (TeamPage), el flujo del invitado initialPassword(token)->qhub-clave{token}, ni el sistema de solicitudes/permisos (requestChange/respondRequest/spendPasswordPermission, RPC usar_permiso_contrasena). Nunca texto plano: reusar el cifrado AES-GCM existente. Autorizacion de admin SIEMPRE dentro del SQL (es_admin_org).",
+  "key_patterns": "SQL RPC admin-only sigue el patron de public.perfil_de_miembro/editar_miembro (migracion 20261022000002_administrar_miembros.sql): 'if not public.es_admin_org(p_org) then raise exception ''Sin permiso'' using errcode = ''42501''', security definer, set search_path = '''', revoke de public/anon y grant a authenticated (o a service_role para funciones que solo llama una Edge Function, como clave_inicial_cifrada en 20261025000002_clave_inicial_cifrada.sql). El cifrado vive en _shared/clave.ts (loadKey, readInitialPassword, sealInitialPassword) y _shared/crypto.ts (AES-GCM, sobre {v,iv,d} base64). El web invoca Edge Functions con invokeFunction (src/shared/invoke-function.ts) y el repo Supabase (SupabaseStaffRepository) traduce errores a Failure con this.run(). Metodo espejo a copiar: initialPassword(token) en supabase-staff-repository.ts.",
+  "relevant_files": [
+    "/home/miguelzambrano/projects/Qhub_App/supabase/migrations/20261024000002_clave_inicial.sql",
+    "/home/miguelzambrano/projects/Qhub_App/supabase/migrations/20261025000002_clave_inicial_cifrada.sql",
+    "/home/miguelzambrano/projects/Qhub_App/supabase/migrations/20261022000002_administrar_miembros.sql",
+    "/home/miguelzambrano/projects/Qhub_App/supabase/migrations/20261021000001_invitaciones_por_correo.sql",
+    "/home/miguelzambrano/projects/Qhub_App/supabase/functions/qhub-clave/index.ts",
+    "/home/miguelzambrano/projects/Qhub_App/supabase/functions/qhub-invite/index.ts",
+    "/home/miguelzambrano/projects/Qhub_App/supabase/functions/_shared/clave.ts",
+    "/home/miguelzambrano/projects/Qhub_App/supabase/functions/_shared/crypto.ts",
+    "/home/miguelzambrano/projects/Qhub_App/supabase/functions/_shared/clave_flow_test.ts",
+    "/home/miguelzambrano/projects/Qhub_Web/apps/web/src/features/staff/repository.ts",
+    "/home/miguelzambrano/projects/Qhub_Web/apps/web/src/features/staff/supabase-staff-repository.ts",
+    "/home/miguelzambrano/projects/Qhub_Web/apps/web/src/features/team/TeamPage.tsx",
+    "/home/miguelzambrano/projects/Qhub_Web/apps/web/src/testing/fakes.ts",
+    "/home/miguelzambrano/projects/Qhub_Web/apps/web/src/shared/invoke-function.ts",
+    "/home/miguelzambrano/projects/Qhub_Web/apps/web/src/app/invitations.test.tsx"
+  ],
+  "directory_structure": "Qhub_Web/apps/web/src/features/staff (repository.ts = puertos/interfaces, supabase-staff-repository.ts = adaptador Supabase, organization.ts/requests.ts = tipos), .../features/team/TeamPage.tsx (UI de equipo: invitar, miembros, invitaciones, solicitudes), .../testing/fakes.ts (FakeStaffRepository para tests), .../shared/ui (Dialog, Button, Notice, IconButton, useToast), .../shared/invoke-function.ts. Qhub_App/supabase/functions/qhub-clave (Edge que descifra la clave), _shared (clave.ts/crypto.ts + *_test.ts), migrations (*.sql versionadas)."
+}
