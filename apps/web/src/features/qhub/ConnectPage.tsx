@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { validateEmail, validatePassword, validatePersonName, validateUsername, type Failure } from '@qhub/core';
 import type { RegisterInput } from '@qhub/api-client';
 import { Button, Checkbox, EmailField, Logo, Notice, Panel, Tabs, TextField, useToast, GeneratePassword } from '@/shared/ui';
@@ -20,7 +21,8 @@ export function ConnectPage() {
     if (r.saved === 'dispositivo') toast.show('Guardamos la conexión en este dispositivo: no tendrás que volver a escribirla aquí.');
     else if (r.saved === false) toast.show('Conectaste, pero no pudimos guardar la conexión para la próxima vez. Inténtalo desde Ajustes.', { error: true });
   };
-  const [tab, setTab] = useState(0);
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(() => (params.get('tab') === 'crear' ? 1 : 0));   // el enlace «Regístrate en Qhub» abre directo en «Crear cuenta»
   const [id, setId] = useState('');
   const [pw, setPw] = useState('');
   const [reg, setReg] = useState({ first: '', last: '', user: '', mail: '', country: 'Ecuador', city: '' });

@@ -35,7 +35,8 @@ function Gate() {
   const autoConnecting = connection.status === 'connecting' && !!connection.auto && pathname !== '/connect';
   const loading = auth.status === 'loading' || (signedIn && (mfa === 'checking' || (mfa === 'ok' && (memberships.status === 'loading' || autoConnecting))));
   const target = resolveRedirect({
-    location: pathname,
+    location: pathname + search,              // incluye el query (p. ej. /connect?tab=crear); resolveRedirect normaliza el pathname
+
     authLoading: auth.status === 'loading',
     signedIn,
     membershipsLoading: memberships.status === 'loading',
