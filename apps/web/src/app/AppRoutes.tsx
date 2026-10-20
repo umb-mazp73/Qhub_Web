@@ -24,6 +24,7 @@ const NotFoundPage = lazy(() => import('@/features/shell/NotFoundPage').then((m)
 const SettingsPage = lazy(() => import('@/features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 import { Logo } from '@/shared/ui';
 import { pendingInvitation, rememberInvitation } from '@/features/invitation/pending-invitation';
+const ConfirmPage = lazy(() => import('@/features/auth/ConfirmPage').then((m) => ({ default: m.ConfirmPage })));
 const InvitationPage = lazy(() => import('@/features/invitation/InvitationPage').then((m) => ({ default: m.InvitationPage })));
 
 function Gate() {
@@ -61,6 +62,7 @@ export function AppRoutes() {
       <Route element={<Gate />}>
         <Route path="/cargando" element={<Splash />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/confirmar" element={<ConfirmPage />} />
         <Route path="/setup" element={<SetupPage />} />
         <Route path="/connect" element={<ConnectPage />} />
         <Route path="/invitacion" element={<InvitationPage />} />

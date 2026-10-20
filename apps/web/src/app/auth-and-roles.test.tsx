@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
-import { badRequestFailure, unauthorizedFailure } from '@qhub/core';
+import { badRequestFailure, notFoundFailure, unauthorizedFailure } from '@qhub/core';
 import { AppRoutes } from '@/app/AppRoutes';
 import { clearInvitation, pendingInvitation } from '@/features/invitation/pending-invitation';
 import { adminMembership, agentMembership, ana, FakeVault, org, FakeQueueRepository, FakeStaffRepository, makeQueue, MemoryTokenStore } from '@/testing/fakes';
@@ -77,6 +77,20 @@ describe('acceso', () => {
     await waitFor(() => expect(staff.calls).toContain('signInCode:a1b2c3d4e5f6a1b2c3d4e5f6'));
     await waitFor(() => expect(staff.calls.some((c) => c.startsWith('accept:'))).toBe(true));
     clearInvitation();
+  });
+
+  it('el botón del correo de registro crea las cuentas y lleva al inicio de sesión', async () => {
+    const staff = new FakeStaffRepository();
+    await renderWith(<AppRoutes />, makeContainer({ staff }), '/confirmar?token=abc');
+    await waitFor(() => expect(staff.confirmed).toEqual(['abc']));
+    expect(await screen.findByText(/tu cuenta ya está creada/)).toBeInTheDocument();
+  });
+
+  it('si el enlace del correo no sirve, lo explica', async () => {
+    const staff = new FakeStaffRepository();
+    staff.confirmFailure = notFoundFailure('Este enlace no es válido o ya venció.');
+    await renderWith(<AppRoutes />, makeContainer({ staff }), '/confirmar?token=mal');
+    expect(await screen.findByText('Este enlace no es válido o ya venció.')).toBeInTheDocument();
   });
 
   it('una invitación inválida se explica', async () => {

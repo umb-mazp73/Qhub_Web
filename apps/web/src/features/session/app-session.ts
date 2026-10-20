@@ -162,7 +162,8 @@ export class AppSession {
       const username = input.username;
       const r = await this.qhubAuth.register(input);
       if (r.ok) { const c = await this.connect(username, pw); if (!c.ok) fail(c.failure); return; }
-      if (r.failure.kind !== 'conflict') { fail(r.failure); return; }       // el correo ya existe en Qhub con otra contraseña: que la persona conecte a mano
+      if (r.failure.kind !== 'conflict') { fail(r.failure); return; }
+      if (i === 0) { const again = await this.connect(u.email, pw); if (again.ok) return; }   // ya la habían creado (al registrarse) con esta misma contraseña
     }
     fail();
   }

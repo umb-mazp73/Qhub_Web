@@ -8,7 +8,6 @@ import { passwordStrength, validateEmail, validateOrgName, validatePassword, val
 import { LocationFields } from '@/features/geo/LocationFields';
 import { ACCOUNT_KINDS, type AccountKind } from '@/features/staff';
 import { clearInvitation, pendingInvitation, rememberInvitation } from '@/features/invitation/pending-invitation';
-import { qhubRegistration } from '@/features/qhub/account';
 
 type Mode = 'login' | 'register' | 'forgot' | 'invite';
 const TITLE: Record<Mode, string> = { login: 'Inicia sesión', register: 'Crea tu cuenta', forgot: 'Recupera tu acceso', invite: 'Únete con tu invitación' };
@@ -18,7 +17,7 @@ const wasRemoved = () => { try { return sessionStorage.getItem(REMOVED_KEY) === 
 const savedEmail = () => { try { return localStorage.getItem(REMEMBER_KEY) ?? ''; } catch { return ''; } };
 
 export function LoginPage() {
-  const { staff, security, auth } = useContainer();
+  const { staff, security } = useContainer();
   const { session } = useSession();
   const [mode, setMode] = useState<Mode>('login');
   const [busy, setBusy] = useState(false);
@@ -35,7 +34,7 @@ export function LoginPage() {
   const withAccount = mode === 'register' && !pendingInvitation();     // quien viene por una invitación se une a un equipo: no crea cuenta nueva
   const [errs, setErrs] = useState<Record<string, string | null>>({});
   const [error, setError] = useState<Failure | null>(null);
-  const [info, setInfo] = useState<string | null>(() => (wasRemoved() ? 'Ya no tienes acceso a esa organización: un administrador te quitó del equipo.' : wasConfirmed() ? 'Correo confirmado. Inicia sesión con tu contraseña para terminar de crear tu cuenta.' : null));
+  const [info, setInfo] = useState<string | null>(() => (wasRemoved() ? 'Ya no tienes acceso a esa organización: un administrador te quitó del equipo.' : wasConfirmed() ? 'Correo confirmado: tu cuenta ya está creada. Inicia sesión con tu contraseña.' : null));
 
   function go(m: Mode) { try { sessionStorage.removeItem(REMOVED_KEY); } catch { /* sin storage */ } setMode(m); setErrs({}); setError(null); setInfo(null); setPassword(''); setAgain(''); }
 
@@ -71,11 +70,10 @@ export function LoginPage() {
       setBusy(false);
     } else if (register) {
       const account = withAccount ? { kind, name: orgName.trim(), country: loc.country, city: loc.city, timeZone: loc.timeZone } : undefined;
-      session.holdPassword(password);      // si entra de una (sin confirmar el correo), con esto se crea y conecta su cuenta Qhub
-      // Una sola cuenta: se crea también en Qhub, con el mismo correo y contraseña (primero, para que al entrar ya exista; si falla, se reintenta al entrar).
-      if (account) await auth.register(qhubRegistration({ kind, orgName: account.name, fullName: `${first} ${last}`, email: email.trim(), password, country: account.country, city: account.city })).catch(() => undefined);
-      const r = await staff.signUp({ email, password, firstName: first, lastName: last, ...(account ? { account } : {}) });
-      if (!r.ok) session.holdPassword(null);
+      // Con cuenta nueva no se crea NADA todavía (ni en la web ni en Qhub): se guarda el registro y se manda el correo; al confirmarlo se crean las dos.
+      // Quien viene por una invitación se une a un equipo: ese sí usa el registro normal.
+      const r = account ? await staff.requestRegistration({ email, password, firstName: first, lastName: last, account }) : await staff.signUp({ email, password, firstName: first, lastName: last });
+      if (r.ok && account) { setBusy(false); go('login'); setInfo('Te enviamos un correo para confirmar tu cuenta. Cuando lo confirmes se crea todo y puedes iniciar sesión.'); return; }
       setBusy(false);
       if (!r.ok) setError(r.failure);
       else if (r.value === null) { go('login'); setInfo('Te enviamos un correo para confirmar tu cuenta. Después inicia sesión.'); }
@@ -122,6 +120,13 @@ export function LoginPage() {
             <TextField label="Contraseña" type="password" revealable value={password} onChange={(e) => setPassword(e.target.value)} error={errs.password}
               helper={mode === 'register' ? 'Mínimo 8 caracteres, con letras y números.' : undefined} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} large />
           )}
+          {mode === 'register' && (
+            <>
+              <TextField label="Repite la contraseña" type="password" revealable value={again} onChange={(e) => setAgain(e.target.value)} error={errs.again} autoComplete="new-password" large />
+              <StrengthMeter score={passwordStrength(password)} empty={!password} />
+              <GeneratePassword onGenerate={(p) => { setPassword(p); setAgain(p); }} />
+            </>
+          )}
           {withAccount && (
             <>
               <fieldset className="m-0 grid grid-cols-1 gap-2 border-0 p-0 sm:grid-cols-2">
@@ -137,13 +142,6 @@ export function LoginPage() {
               <TextField label={kind === 'persona' ? 'Nombre con el que te verá el público' : 'Nombre de la organización'} value={orgName} onChange={(e) => setOrgName(e.target.value)} error={errs.orgName}
                 helper={kind === 'persona' ? 'Por ejemplo, tu nombre o el de tu consultorio.' : undefined} />
               <LocationFields storeAs="name" value={loc} onChange={setLoc} errors={{ city: errs.city }} />
-            </>
-          )}
-          {mode === 'register' && (
-            <>
-              <StrengthMeter score={passwordStrength(password)} empty={!password} />
-              <GeneratePassword onGenerate={(p) => { setPassword(p); setAgain(p); }} />
-              <TextField label="Repite la contraseña" type="password" revealable value={again} onChange={(e) => setAgain(e.target.value)} error={errs.again} autoComplete="new-password" large />
             </>
           )}
           <Button type="submit" size="lg" block icon="arrow-right" loading={busy}>{mode === 'register' ? 'Crear cuenta' : mode === 'forgot' ? 'Enviar enlace' : 'Continuar'}</Button>

@@ -56,6 +56,18 @@ export class SupabaseStaffRepository implements StaffRepository {
     });
   }
 
+  requestRegistration(input: { email: string; password: string; firstName: string; lastName: string; account: NonNullable<StaffUser['pendingOrg']> }) {
+    return this.run(async () => {
+      const a = input.account;
+      const r = await invokeFunction(this.sb, 'qhub-register', { accion: 'solicitar', email: input.email.trim(), password: input.password, nombre: input.firstName.trim(), apellido: input.lastName.trim(),
+        cuenta: { tipo: a.kind, nombre: a.name.trim(), pais: a.country, ciudad: a.city, zona_horaria: a.timeZone } });
+      if (!r.ok) throw r.failure;
+    });
+  }
+  confirmRegistration(token: string) {
+    return this.run(async () => { const r = await invokeFunction(this.sb, 'qhub-register', { accion: 'confirmar', token: token.trim() }); if (!r.ok) throw r.failure; });
+  }
+
   signInWithInviteCode(code: string) {
     return this.run(async () => {
       const r = await invokeFunction<{ token_hash: string }>(this.sb, 'qhub-invite-code', { codigo: code.trim() });

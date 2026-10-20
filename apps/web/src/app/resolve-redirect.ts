@@ -20,6 +20,7 @@ export function resolveRedirect(o: {
   // Fix #3 (HIGH): el destinatario del correo de reset de Qhub llega ANÓNIMO. Estas rutas
   // son públicas y el chequeo va ANTES del guardado !signedIn (que si no, lo expulsa a /login).
   if (path === '/qhub/recuperar' || path === '/qhub/restablecer') return null;
+  if (path === '/confirmar') return null;                            // el botón del correo de registro: llega sin sesión y crea las cuentas
   if (o.authLoading || (o.signedIn && o.mfa === 'checking')) return null;
   if (!o.signedIn) return path === '/login' ? null : '/login';
   if (o.mfa === 'required') return path === '/verificacion' ? null : '/verificacion';
