@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Failure } from '@qhub/core';
 import { Button, cx, Icon, Logo, Notice, Panel, Tabs, TextField } from '@/shared/ui';
 import { useContainer, useSession } from '@/app/container';
+import { CONFIRMED_KEY } from '@/features/session/app-session';
 import { LocationFields } from '@/features/geo/LocationFields';
 import { ACCOUNT_KINDS, type AccountKind } from '@/features/staff';
 import { slugify, validateOrgName } from '@qhub/core';
@@ -52,6 +53,17 @@ export function SetupPage() {
     setBusy(true);
     void finish(staff.acceptInvitation(token));
   }
+
+  // Entró por el enlace del correo sin escribir su contraseña: ya eligió todo al registrarse, así que se le lleva al inicio de sesión
+  // (con la contraseña se crea y conecta todo, sin otro formulario).
+  const toLogin = Boolean(pre && needsPassword);
+  useEffect(() => {
+    if (!toLogin) return;
+    try { sessionStorage.setItem(CONFIRMED_KEY, '1'); } catch { /* sin storage */ }
+    void session.signOut();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [toLogin]);
+  if (toLogin) return <main id="contenido" className="grid min-h-full place-items-center p-6"><p className="text-text-secondary">Correo confirmado. Te llevamos a iniciar sesión…</p></main>;
 
   return (
     <main id="contenido" className="grid min-h-full place-items-center p-6">

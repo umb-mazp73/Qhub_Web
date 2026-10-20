@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import { badRequestFailure, unauthorizedFailure } from '@qhub/core';
 import { AppRoutes } from '@/app/AppRoutes';
+import { clearInvitation, pendingInvitation } from '@/features/invitation/pending-invitation';
 import { adminMembership, agentMembership, ana, FakeVault, org, FakeQueueRepository, FakeStaffRepository, makeQueue, MemoryTokenStore } from '@/testing/fakes';
 import { makeContainer, renderWith } from '@/testing/harness';
 
@@ -62,6 +63,20 @@ describe('acceso', () => {
     const [reg] = c.fakes.auth.registrations;
     expect(reg).toMatchObject({ email: 'ana@x.co', password: 'secreto123', accountType: 'empresa', companyName: 'Notaría 12', username: 'ana', acceptedTerms: true });
     expect(c.fakes.auth.logins).toEqual(['ana@x.co', 'ana']);
+  });
+
+  it('desde el inicio de sesión: «Tengo una invitación» pide solo el código, la acepta y entra', async () => {
+    const staff = new FakeStaffRepository();
+    const { user } = await renderWith(<AppRoutes />, makeContainer({ staff }));
+    await user.click(await screen.findByRole('button', { name: 'Tengo una invitación' }));
+    expect(screen.queryByLabelText('Contraseña')).toBeNull();               // solo el código
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(screen.getByText(/Pega el código de la invitación/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Código de invitación'), 'a1b2c3d4e5f6a1b2c3d4e5f6');
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    await waitFor(() => expect(staff.calls).toContain('signInCode:a1b2c3d4e5f6a1b2c3d4e5f6'));
+    await waitFor(() => expect(staff.calls.some((c) => c.startsWith('accept:'))).toBe(true));
+    clearInvitation();
   });
 
   it('una invitación inválida se explica', async () => {

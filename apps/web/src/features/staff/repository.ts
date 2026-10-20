@@ -13,6 +13,8 @@ export interface AuthPort {
   signIn(email: string, password: string): Promise<Result<StaffUser>>;
   /** `null` = el proyecto exige confirmar el correo antes de entrar. */
   signUp(input: { email: string; password: string; firstName: string; lastName: string; account?: NonNullable<StaffUser['pendingOrg']> }): Promise<Result<StaffUser | null>>;
+  /** Abre sesión con solo el código de una invitación vigente (el servidor valida el código). */
+  signInWithInviteCode(code: string): Promise<Result<StaffUser>>;
   signOut(): Promise<Result<void>>;
 }
 

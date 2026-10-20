@@ -56,6 +56,15 @@ export class SupabaseStaffRepository implements StaffRepository {
     });
   }
 
+  signInWithInviteCode(code: string) {
+    return this.run(async () => {
+      const r = await invokeFunction<{ token_hash: string }>(this.sb, 'qhub-invite-code', { codigo: code.trim() });
+      if (!r.ok) throw r.failure;
+      const d = await this.q<{ user: User }>(this.sb.auth.verifyOtp({ token_hash: r.value.token_hash, type: 'magiclink' }));
+      return this.toUser(d.user)!;
+    });
+  }
+
   signOut() { return this.run(async () => { await this.q(this.sb.auth.signOut().then((r) => ({ data: null, error: r.error }))); }); }
 
   private profileOf(r: Row): Profile {

@@ -46,6 +46,12 @@ export class FakeStaffRepository implements StaffRepository {
     return ok(this.user);
   }
   async signUp(i: { email: string }): Promise<Result<StaffUser | null>> { this.calls.push(`signUp:${i.email}`); return ok(null); }
+  inviteCodeFailure: Failure | null = null;
+  async signInWithInviteCode(code: string): Promise<Result<StaffUser>> {
+    this.calls.push(`signInCode:${code}`);
+    if (this.inviteCodeFailure) return err(this.inviteCodeFailure);
+    this.user = this.user ?? { id: 'u1', email: 'ana@x.co' }; this.emit(); return ok(this.user);
+  }
   async signOut(): Promise<Result<void>> { this.calls.push('signOut'); this.user = null; this.emit(); return ok(undefined); }
 
   async profile(): Promise<Result<Profile>> { return ok({ ...this.profileData }); }

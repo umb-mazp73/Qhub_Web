@@ -8,6 +8,8 @@ import { mfaRequired, type SecurityRepository } from '@/features/security/securi
 
 /** Marca en sessionStorage que a esta persona la quitaron del equipo; el inicio de sesión la lee y la borra. */
 export const REMOVED_KEY = 'qhub.removed';
+/** Marca en sessionStorage que acaba de confirmar su correo; el inicio de sesión lo avisa y la borra. */
+export const CONFIRMED_KEY = 'qhub.confirmed';
 
 export type Loadable<T> = { status: 'loading' } | { status: 'ready'; value: T } | { status: 'error'; failure: Failure };
 
