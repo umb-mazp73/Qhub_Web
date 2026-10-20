@@ -81,7 +81,7 @@ export function AppShell() {
   );
 
   return (
-    <div className="grid h-full grid-rows-[var(--header-height)_1fr] print:block print:h-auto">
+    <div className="grid h-full grid-rows-[var(--header-height)_minmax(0,1fr)] overflow-hidden print:block print:h-auto print:overflow-visible">
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-[70] focus:bg-layer-01 focus:px-4 focus:py-2">Saltar al contenido</a>
       <header className="relative grid grid-cols-[1fr_auto_auto] items-center gap-1 bg-sidebar-bg px-2 text-sidebar-text-active sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:gap-3 sm:px-3 lg:grid-cols-[1fr_minmax(0,620px)_1fr] print:hidden">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -115,7 +115,7 @@ export function AppShell() {
           </span>
         </span>
       </header>
-      <div className={cx('grid min-h-0 grid-cols-1 transition-[grid-template-columns] duration-300 ease-out print:block', collapsed ? 'md:grid-cols-[var(--sidebar-collapsed)_1fr]' : 'md:grid-cols-[var(--sidebar-width)_1fr]')}>
+      <div className={cx('grid min-h-0 grid-cols-1 grid-rows-[minmax(0,1fr)] transition-[grid-template-columns] duration-300 ease-out print:block', collapsed ? 'md:grid-cols-[var(--sidebar-collapsed)_1fr]' : 'md:grid-cols-[var(--sidebar-width)_1fr]')}>
         <div className="relative hidden md:block print:hidden" onMouseEnter={() => setPeek(true)} onMouseLeave={() => setPeek(false)}>
           <nav id="menu-principal" aria-label="Principal" className={cx('absolute inset-y-0 left-0 z-30 flex flex-col overflow-y-auto overflow-x-hidden bg-sidebar-bg pt-2 transition-[width,box-shadow] duration-300 ease-out', collapsed && !peek ? 'w-[var(--sidebar-collapsed)]' : 'w-[var(--sidebar-width)]', collapsed && peek && 'shadow-overlay')}>{sidebar(collapsed && !peek)}</nav>
         </div>

@@ -24,7 +24,7 @@
 @media (prefers-reduced-motion: reduce) { .animate-live, .animate-shine { animation: none; } }
 
 /* Preferencias de accesibilidad (atributos en <html>, ver app/preferences.ts). Solo reasignan tokens existentes. */
-:root[data-text='large'] body { zoom: 1.15; }
+:root[data-text='large'] body { zoom: 1.15; height: calc(100% / 1.15); }     /* con zoom el 100% de alto crecería 15% y la página scrolleaba entera */
 :root[data-motion='reduce'] *, :root[data-motion='reduce'] *::before, :root[data-motion='reduce'] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 :root[data-contrast='more'] { --border-subtle: var(--border-strong); --text-secondary: var(--text-primary); --text-placeholder: var(--text-secondary); }
 :root[data-contrast='more'] :focus-visible { outline-width: 3px; }

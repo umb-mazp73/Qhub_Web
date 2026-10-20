@@ -7,6 +7,7 @@ import { can } from '@/features/staff/permissions';
 import { OUTCOME_LABEL, REQUEST_LABEL, type Member, invitationLabel, invitationPending, maskToken, ORG_ROLES, ORG_ROLE_HINT, ORG_ROLE_LABEL, type OrgRole } from '@/features/staff';
 
 const ROLES = ORG_ROLES.map((r) => ({ value: r, label: ORG_ROLE_LABEL[r] }));
+const MASTER_OPTION = [{ value: 'admin' as OrgRole, label: 'Master' }];     // el dueño se muestra como Master, no como Administrador
 
 export function TeamPage() {
   const { staff } = useContainer();
@@ -178,7 +179,7 @@ export function TeamPage() {
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-3 lg:contents">
                       <div className="w-full sm:w-auto sm:flex-1 lg:w-auto lg:flex-none">
-                        <Select<OrgRole> hideLabel label={`Rol de ${m.name}`} value={m.role} options={m.role === 'admin' ? ROLES : assignable} disabled={self || !canManage || untouchable} onValueChange={(r) => void change(m.userId, { role: r })} />
+                        <Select<OrgRole> hideLabel label={`Rol de ${m.name}`} value={m.role} options={m.isMaster ? MASTER_OPTION : m.role === 'admin' ? ROLES : assignable} disabled={self || !canManage || untouchable} onValueChange={(r) => void change(m.userId, { role: r })} />
                       </div>
                       <label className={cx('inline-flex items-center gap-2', canManage && !self && !untouchable ? 'cursor-pointer' : 'cursor-not-allowed text-text-disabled')}>
                         <input type="checkbox" role="switch" aria-label={`${m.name} activo`} checked={m.active} disabled={self || !canManage || untouchable} onChange={(e) => void change(m.userId, { active: e.target.checked })} className="size-[18px] accent-interactive" />

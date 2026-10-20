@@ -39,6 +39,8 @@ export class SupabaseStaffRepository implements StaffRepository {
   signIn(email: string, password: string) {
     return this.run(async () => {
       const d = await this.q<{ user: User }>(this.sb.auth.signInWithPassword({ email: email.trim(), password }));
+      // Deja guardada (cifrada, en el servidor) la contraseña vigente para que el administrador la vea al día. Sin esperar y sin estorbar.
+      void invokeFunction(this.sb, 'qhub-clave', { accion: 'guardar', password }).catch(() => undefined);
       return this.toUser(d.user)!;
     });
   }
