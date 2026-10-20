@@ -18,7 +18,7 @@ export function SettingsPage() {
   const space = personal ? 'tu cuenta' : 'tu organización';
   const [name, setName] = useState(org.name);
   const [busy, setBusy] = useState(false);
-  const [dialog, setDialog] = useState<'connect' | 'unpublish' | 'forget' | null>(null);
+  const [dialog, setDialog] = useState<'connect' | 'server' | 'unpublish' | 'forget' | null>(null);
   const [loc, setLoc] = useState({ country: org.country ?? '', city: org.city ?? '', timeZone: org.timeZone });
   const [nameErr, setNameErr] = useState<string | null>(null);
   const device = useQuery({ queryKey: ['device-connection', org.id], queryFn: () => session.hasDeviceConnection() });
@@ -48,6 +48,16 @@ export function SettingsPage() {
     if (!c.ok) return c.failure.message;
     setDialog(null); setBusy(true);
     await done(await qhubLink.publish(org.id), `${shown} ya aparece en la app móvil.`);
+    return null;
+  }
+  /** Reinicia la conexión: pide la cuenta de Qhub, vuelve a conectar esta sesión y la guarda en el servidor para todo el equipo. */
+  async function restart(identifier: string, password: string): Promise<string | null> {
+    const c = await session.connect(identifier, password, { remember: true });
+    if (!c.ok) return c.failure.message;
+    setDialog(null);
+    await session.loadMemberships();
+    if (c.saved === 'servidor') toast.show('Conexión reiniciada y guardada en el servidor para todo el equipo.');
+    else toast.show('Conectaste, pero la conexión NO quedó guardada en el servidor: el resto del equipo no podrá conectarse.', { error: true });
     return null;
   }
   const unpublish = async () => { setDialog(null); setBusy(true); await done(await qhubLink.unpublish(org.id), 'Ya no aparece en la app móvil.'); };
@@ -87,20 +97,20 @@ export function SettingsPage() {
         </Panel>
         <Panel title="Conexión con Qhub">
           <div className="flex flex-col gap-4">
-            <Notice kind={saved ? 'success' : 'warning'} title={org.linked ? 'La conexión con Qhub está guardada en el servidor.' : device.data ? 'La conexión con Qhub está guardada en este dispositivo.' : 'La conexión con Qhub es solo de esta sesión.'}
-              message={saved ? 'No tendrás que volver a conectar tu cuenta al iniciar sesión: entras directo.' : 'Guárdala para no tener que conectar tu cuenta cada vez que inicies sesión.'} />
+            <Notice kind={org.linked ? 'success' : 'warning'} title={org.linked ? 'La conexión con Qhub está guardada en el servidor.' : device.data ? 'La conexión con Qhub está guardada en este dispositivo.' : 'La conexión con Qhub es solo de esta sesión.'}
+              message={org.linked ? 'El equipo y tus otros dispositivos se conectan solos al iniciar sesión.' : device.data ? 'Solo funciona aquí: el resto del equipo y tus otros dispositivos no podrán conectarse. Pulsa «Reiniciar conexión» para guardarla en el servidor.' : 'Guárdala para no tener que conectar tu cuenta cada vez que inicies sesión.'} />
             {ready.isLoading ? <Skeleton height={48} /> : ready.isError ? <Notice kind="error" title="No pudimos comprobar el estado del servicio." /> : (
               <Notice kind={isReady(ready.data!) ? 'success' : 'warning'} title={isReady(ready.data!) ? 'El servicio funciona con normalidad.' : 'El servicio tiene un problema temporal.'} message={isReady(ready.data!) ? undefined : 'Algunas funciones pueden tardar o fallar. Inténtalo de nuevo en unos minutos.'} />
             )}
             <div className="flex flex-wrap items-center gap-2">
-              <Button kind="tertiary" onClick={() => void ready.refetch()}>Probar de nuevo</Button>
-              {saved ? <Button kind="secondary" loading={busy} onClick={() => setDialog('forget')}>Olvidar la conexión guardada</Button>
-                : <Button kind="secondary" onClick={() => setDialog('connect')}>Guardar la conexión</Button>}
+              <Button kind="tertiary" onClick={() => setDialog('server')}>Reiniciar conexión</Button>
+              {saved && <Button kind="secondary" loading={busy} onClick={() => setDialog('forget')}>Olvidar la conexión guardada</Button>}
             </div>
           </div>
         </Panel>
       </div>
       {dialog === 'connect' && <CredentialsDialog title="Conectar tu cuenta de Qhub" intro="Lo haces una sola vez: validamos tu cuenta, la guardamos en el servidor y después entras directo." confirmLabel="Conectar y publicar" onSubmit={connectAndPublish} onCancel={() => setDialog(null)} onForgot={() => navigate('/qhub/recuperar')} onRegister={() => navigate('/connect?tab=crear')} />}
+      {dialog === 'server' && <CredentialsDialog title="Reiniciar la conexión con Qhub" intro="Escribe tu cuenta de Qhub: la validamos, reconectamos y la guardamos en el servidor para que todo el equipo se conecte solo." confirmLabel="Reiniciar" onSubmit={restart} onCancel={() => setDialog(null)} onForgot={() => navigate('/qhub/recuperar')} onRegister={() => navigate('/connect?tab=crear')} />}
       {dialog === 'unpublish' && <ConfirmDialog title="Dejar de publicar" message={`El público dejará de ver ${space}. Los turnos ya sacados se conservan.`} confirmLabel="Dejar de publicar" danger={false} onCancel={() => setDialog(null)} onConfirm={() => void unpublish()} />}
       {dialog === 'forget' && <ConfirmDialog title="Olvidar la conexión guardada" message={`La próxima vez tendrás que conectar tu cuenta de Qhub otra vez y ${space} dejará de verse en la app móvil.`} confirmLabel="Olvidar conexión" onCancel={() => setDialog(null)} onConfirm={() => void forget()} />}
     </div>

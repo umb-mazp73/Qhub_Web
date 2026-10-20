@@ -19,14 +19,17 @@ export function ReconnectBanner() {
   const [busy, setBusy] = useState(false);
   const isAdmin = can(session.membership?.role, 'settings.manage');
   const needed = !!session.membership?.organization.qhubConnected && connection.status === 'disconnected';
-  if (!needed && !open) return null;       // la ventana sigue abierta mientras se conecta (el estado pasa por «conectando»)
+  // administrador conectado solo en este dispositivo: la conexión no está en el servidor y los demás integrantes no pueden conectarse
+  const unsaved = isAdmin && !!session.membership?.organization.qhubConnected && !session.membership.organization.linked && connection.status === 'connected';
+  if (!needed && !unsaved && !open) return null;       // la ventana sigue abierta mientras se conecta (el estado pasa por «conectando»)
 
   // administrador: igual que antes (ventana de credenciales -> session.connect(...))
   async function connect(identifier: string, password: string, remember: boolean): Promise<string | null> {
     const r = await session.connect(identifier, password, { remember });
     if (!r.ok) return r.failure.message;
     setOpen(false);
-    toast.show('Conectado con Qhub.');
+    if (r.saved === 'servidor') toast.show('Conectado con Qhub. La conexión quedó guardada en el servidor para todo el equipo.');
+    else toast.show('Conectaste, pero la conexión NO quedó guardada en el servidor: el resto del equipo no podrá conectarse. Inténtalo de nuevo en unos minutos.', { error: true });
     session.onReconnected?.();               // las pantallas vuelven a pedir lo que no pudieron cargar
     return null;
   }
@@ -42,6 +45,14 @@ export function ReconnectBanner() {
 
   return (
     <>
+    {unsaved && !open && <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 border border-border-subtle border-l-[3px] border-l-support-warning bg-layer-01 p-4 print:hidden">
+      <span className="text-support-warning"><Icon name="warning" /></span>
+      <div className="min-w-0 flex-1">
+        <div className="font-medium">La conexión con Qhub no está guardada en el servidor</div>
+        <div className="t-caption text-text-secondary">Solo funciona en este dispositivo. Guárdala para que el resto del equipo y tus otros dispositivos se conecten solos.</div>
+      </div>
+      <Button size="sm" onClick={() => setOpen(true)}>Guardar conexión</Button>
+    </div>}
     {needed && <div role="alert" className="mb-4 flex flex-wrap items-center gap-3 border border-border-subtle border-l-[3px] border-l-support-warning bg-layer-01 p-4 print:hidden">
       <span className="text-support-warning"><Icon name="warning" /></span>
       <div className="min-w-0 flex-1">
