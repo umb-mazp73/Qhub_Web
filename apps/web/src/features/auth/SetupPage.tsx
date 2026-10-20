@@ -63,6 +63,8 @@ export function SetupPage() {
     void session.signOut();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toLogin]);
+  // Ya eligió todo al registrarse y la organización se está creando sola: solo se ve la pantalla de carga, no el formulario (si falla, sí se muestra con el error).
+  if (pre?.city && !needsPassword && !error) return <div role="status" aria-label="Cargando" className="grid h-full place-items-center"><Logo height={32} /></div>;
   if (toLogin) return <main id="contenido" className="grid min-h-full place-items-center p-6"><p className="text-text-secondary">Correo confirmado. Te llevamos a iniciar sesión…</p></main>;
 
   return (
