@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { countryByAny, unwrap, initialsOf, friendlyError } from '@qhub/core';
-import { Avatar, Button, ConfirmDialog, Dialog, Notice, PageHead, Panel, Select, Skeleton, Switch, Tabs, TextField, useToast } from '@/shared/ui';
+import { Avatar, Button, ConfirmDialog, Dialog, Notice, PageHead, Panel, SecretValue, Select, Skeleton, Switch, Tabs, TextField, useToast } from '@/shared/ui';
 import { SecurityTab } from './SecurityTab';
 import { useContainer, useSession } from '@/app/container';
 import { applyPreferences, getPreferences, REFRESH_OPTIONS, refreshLabel, type Preferences, type RefreshSeconds, type ThemeMode } from '@/features/preferences/preferences';
@@ -53,7 +53,7 @@ function MyPasswordDialog({ orgId, userId, onClose }: { orgId: string; userId: s
         {q.isLoading ? <Skeleton height={64} /> : q.isError ? <Notice kind="error" title={friendlyError(q.error)} /> : pw ? <>
           <p className="m-0 text-text-secondary">Mira, esta es tu contraseña. Cópiala y pégala donde la necesites; guárdala en un lugar seguro.</p>
           <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border border-border-subtle bg-layer-02 p-4">
-            <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0 break-all font-mono">{pw}</dd>
+            <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0"><SecretValue value={pw} /></dd>
           </dl>
           <div><Button kind="secondary" icon="copy" onClick={async () => { await navigator.clipboard?.writeText(pw); toast.show('Contraseña copiada.'); }}>Copiar contraseña</Button></div>
         </> : <p className="m-0 text-text-secondary">No hay una contraseña guardada para mostrarte. Si no la recuerdas, pídele a tu administrador que te ayude a cambiarla.</p>}

@@ -93,7 +93,8 @@ export class AppSession {
   async checkStillMember() {
     if (!this.user || this.snap.memberships.status !== 'ready' || this.snap.memberships.value.length === 0) return;
     const r = await this.staff.memberships();
-    if (r.ok && r.value.length === 0 && this.user) await this.expel();
+    // Sin organización, o la cuenta ya no existe (al quitarla del equipo se borra): se cierra la sesión.
+    if (this.user && ((r.ok && r.value.length === 0) || (!r.ok && r.failure.kind === 'unauthorized'))) await this.expel();
   }
 
   async loadMemberships() {

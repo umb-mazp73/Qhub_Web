@@ -33,7 +33,7 @@ describe('equipo: el administrador edita y quita a su gente', () => {
     const { user, staff } = await open();
     expect(screen.queryByRole('button', { name: /Quitar a Ana Gómez/ })).toBeNull();
     await user.click(screen.getByRole('button', { name: 'Quitar a Luis Vera del equipo' }));
-    expect(screen.getByText(/Su cuenta no se borra/)).toBeInTheDocument();
+    expect(screen.getByText(/se elimina; si se vuelve a registrar/)).toBeInTheDocument();
     expect(staff.calls).not.toContain('removeMember:u2');
     await user.click(screen.getByRole('button', { name: 'Quitar del equipo' }));
     await waitFor(() => expect(staff.calls).toContain('removeMember:u2'));

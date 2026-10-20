@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { generatePassword, initialsOf, passwordStrength, validatePassword, unwrap, validateEmail, validatePersonName, isValidPhone, friendlyError } from '@qhub/core';
-import { Avatar, StrengthMeter, Button, cx, ConfirmDialog, Dialog, Icon, EmptyState, EmailField, IconButton, Notice, PageHead, Pager, Panel, Select, Skeleton, TextField, usePaged, useToast } from '@/shared/ui';
+import { Avatar, StrengthMeter, Button, cx, ConfirmDialog, Dialog, Icon, EmptyState, EmailField, IconButton, Notice, PageHead, Pager, Panel, SecretValue, Select, Skeleton, TextField, usePaged, useToast } from '@/shared/ui';
 import { useContainer, useSession } from '@/app/container';
 import { can } from '@/features/staff/permissions';
 import { OUTCOME_LABEL, REQUEST_LABEL, type Member, invitationLabel, invitationPending, maskToken, ORG_ROLES, ORG_ROLE_HINT, ORG_ROLE_LABEL, type OrgRole } from '@/features/staff';
@@ -68,7 +68,7 @@ export function TeamPage() {
     setEmail(''); setFirst(''); setLast(''); setPosition(''); setPassword('');
     void qc.invalidateQueries({ queryKey: ['invitations', orgId] });
     if (given && r.value.passwordSet) setCredentials({ email: r.value.invitation.email, password: given });     // única vez que se muestra
-    else if (given) toast.show('Esa persona ya tenía cuenta: no cambiamos su contraseña. Entra con la suya.', { error: true });
+    else if (given) toast.show('Ese correo ya tiene una cuenta de Qhub propia: no podemos cambiarle la contraseña. Entrará con la que ya tiene.', { error: true });
     reportSent(r.value, r.value.invitation.email);
   }
 
@@ -229,7 +229,7 @@ export function TeamPage() {
             <Notice kind="warning" title="Guarda esta contraseña ahora." message="Es la única vez que se muestra: no la guardamos. Compártela por un canal seguro." />
             <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border border-border-subtle bg-layer-02 p-4">
               <dt className="t-caption text-text-secondary">Correo</dt><dd className="m-0 truncate">{credentials.email}</dd>
-              <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0 font-mono">{credentials.password}</dd>
+              <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0"><SecretValue value={credentials.password} /></dd>
             </dl>
             <div><Button kind="secondary" icon="copy" onClick={async () => { await navigator.clipboard?.writeText(`Correo: ${credentials.email}\nContraseña: ${credentials.password}`); toast.show('Datos copiados.'); }}>Copiar datos</Button></div>
           </div>
@@ -239,14 +239,14 @@ export function TeamPage() {
             <Notice kind="warning" title="Es la contraseña actual de esta persona." message="Se actualiza sola cuando la cambia. Compártela solo por un canal seguro." />
             {assigned.password !== null ? <>
               <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border border-border-subtle bg-layer-02 p-4">
-                <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0 font-mono">{assigned.password}</dd>
+                <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0"><SecretValue value={assigned.password} /></dd>
               </dl>
               <div><Button kind="secondary" icon="copy" onClick={async () => { await navigator.clipboard?.writeText(assigned.password!); toast.show('Contraseña copiada.'); }}>Copiar contraseña</Button></div>
             </> : <p className="m-0 text-text-secondary">Todavía no tenemos guardada la contraseña de esta persona (entró antes de que las guardáramos). En cuanto la cambie desde Mi perfil, aparecerá aquí.</p>}
           </div>
         </Dialog>}
         {editing && <EditMemberDialog member={editing} orgId={orgId} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void qc.invalidateQueries({ queryKey: ['members', orgId] }); toast.show('Perfil actualizado.'); }} />}
-        {removing && <ConfirmDialog title="Quitar del equipo" message={`${removing.name} dejará de tener acceso a tu organización. Su cuenta no se borra: solo termina su pertenencia a este equipo.`} confirmLabel="Quitar del equipo"
+        {removing && <ConfirmDialog title="Quitar del equipo" message={`${removing.name} dejará de tener acceso a tu organización. Si su cuenta la creaste con una invitación, se elimina; si se vuelve a registrar con ese correo, entra como persona nueva.`} confirmLabel="Quitar del equipo"
           onCancel={() => setRemoving(null)} onConfirm={() => void (async () => {
             const r = await staff.removeMember(orgId, removing.userId); setRemoving(null);
             if (r.ok) { void qc.invalidateQueries({ queryKey: ['members', orgId] }); toast.show('Quitamos a la persona del equipo.'); } else toast.show(r.failure.message, { error: true });
