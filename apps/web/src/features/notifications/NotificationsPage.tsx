@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/app/container';
 import { routeAllowed } from '@/features/staff';
-import { Button, EmptyState, Notice, PageHead, Panel, Select, Skeleton, Tabs, useToast } from '@/shared/ui';
+import { Button, EmptyState, Notice, PageHead, Pager, Panel, Select, Skeleton, Tabs, usePaged, useToast } from '@/shared/ui';
 import { AutoRefresh } from '@/features/shell/AutoRefresh';
 import { enableSystemNotices, setSystemNotices, systemNoticesDenied, systemNoticesOn, systemNoticesSupported } from './popups';
 import { groupByDay, NOTICE_KIND_LABEL, type NoticeKind, type StaffNotice } from './notifications';
@@ -23,6 +23,7 @@ export function NotificationsPage() {
   const all = n.list.data ?? [];
   const shown = all.filter((x) => (tab === 0 || !x.read) && (!kind || x.kind === kind));
   const unread = all.filter((x) => !x.read).length;
+  const paged = usePaged(shown, 15, `${tab}|${kind}`);
   const open = (x: StaffNotice) => { if (!x.read) void n.markRead(x); if (x.route && routeAllowed(role, x.route)) nav(x.route); };     // un aviso nunca lleva a una pantalla que el rol no puede ver
   const fail = (r: { ok: boolean; failure?: { message: string } }) => { if (!r.ok) toast.show(r.failure?.message ?? 'No pudimos completar la acción.', { error: true }); };
 
@@ -44,11 +45,12 @@ export function NotificationsPage() {
           <EmptyState title="No pudimos cargar los avisos" message={friendlyError(n.list.error)} action={<Button kind="tertiary" onClick={() => void n.list.refetch()}>Reintentar</Button>} />
         ) : shown.length === 0 ? (
           <EmptyState title={tab === 1 ? 'No tienes avisos sin leer' : 'Aún no hay avisos'} message="Cuando alguien se una al equipo o a tu organización, lo verás aquí." />
-        ) : groupByDay(shown).map((g) => (
+        ) : groupByDay(paged.rows).map((g) => (
           <Panel key={g.label} title={g.label}>
             <ul className="m-0 list-none p-0">{g.items.map((x) => <NoticeRow key={x.id} notice={x} onOpen={open} onRead={async (v) => fail(await n.markRead(v))} onRemove={async (v) => fail(await n.remove(v))} />)}</ul>
           </Panel>
         ))}
+        {!n.list.isLoading && !n.list.isError && <Pager paged={paged} noun="avisos" className="border bg-layer-01" />}
       </div>
     </div>
   );

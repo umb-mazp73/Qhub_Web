@@ -16,3 +16,4 @@ export * from './QueueTile';
 export * from './ErrorBoundary';
 export * from './fields';
 export * from './charts';
+export * from './pager';

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { generatePassword, initialsOf, passwordStrength, validatePassword, unwrap, validateEmail, validatePersonName, isValidPhone, friendlyError } from '@qhub/core';
-import { Avatar, StrengthMeter, Button, cx, ConfirmDialog, Dialog, Icon, EmptyState, EmailField, IconButton, Notice, PageHead, Panel, Select, Skeleton, TextField, useToast } from '@/shared/ui';
+import { Avatar, StrengthMeter, Button, cx, ConfirmDialog, Dialog, Icon, EmptyState, EmailField, IconButton, Notice, PageHead, Pager, Panel, Select, Skeleton, TextField, usePaged, useToast } from '@/shared/ui';
 import { useContainer, useSession } from '@/app/container';
 import { can } from '@/features/staff/permissions';
 import { OUTCOME_LABEL, REQUEST_LABEL, type Member, invitationLabel, invitationPending, maskToken, ORG_ROLES, ORG_ROLE_HINT, ORG_ROLE_LABEL, type OrgRole } from '@/features/staff';
@@ -42,6 +42,9 @@ export function TeamPage() {
   const toggleShown = (id: string) => setShown((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const pendingList = (invitations.data ?? []).filter((i) => invitationPending(i));
+  const pagedMembers = usePaged(members.data ?? [], 10);
+  const pagedInvites = usePaged(pendingList, 8);
+  const pagedHistory = usePaged(history.data ?? [], 8);
 
   function reportSent(r: { sent: boolean; reason?: string }, email: string) {
     if (r.sent) toast.show(`Enviamos la invitación a ${email}.`);
@@ -152,7 +155,7 @@ export function TeamPage() {
         </Panel>}
         {canManage && (history.data?.length ?? 0) > 0 && <Panel title="Historial de solicitudes">
           <ul className="m-0 list-none p-0">
-            {history.data!.map((h) => (
+            {pagedHistory.rows.map((h) => (
               <li key={h.id} className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border-subtle py-2 first:border-t-0">
                 <div className="min-w-0 flex-[2] basis-56"><strong className="block truncate">{h.name}</strong><span className="text-text-secondary">{REQUEST_LABEL[h.type]}</span>{h.reason && <span className="t-caption block truncate text-text-secondary">“{h.reason}”</span>}</div>
                 <span className={cx('inline-flex flex-1 basis-40 items-center gap-1', h.outcome === 'rechazada' ? 'text-support-error' : h.outcome === 'vencida' ? 'text-text-secondary' : 'text-state-done-text')}>
@@ -161,11 +164,12 @@ export function TeamPage() {
               </li>
             ))}
           </ul>
+          <Pager paged={pagedHistory} noun="solicitudes" className="-mx-4 mt-2" />
         </Panel>}
         <Panel title="Miembros">
           {members.isLoading ? <Skeleton height={80} /> : members.isError ? <Notice kind="error" title={friendlyError(members.error)} /> : (
             <ul className="m-0 list-none p-0">
-              {(members.data ?? []).map((m) => {
+              {pagedMembers.rows.map((m) => {
                 const self = m.userId === me;
                 const untouchable = !!m.isMaster || (m.role === 'admin' && !iAmMaster);     // al master no lo toca nadie; a un admin solo el master
                 return (
@@ -196,9 +200,10 @@ export function TeamPage() {
               })}
             </ul>
           )}
+          <Pager paged={pagedMembers} noun="miembros" className="-mx-4 mt-2" />
         </Panel>
         {canManage && <Panel title="Invitaciones pendientes">
-          {pendingList.length === 0 ? <p className="text-text-secondary">No hay invitaciones pendientes.</p> : pendingList.map((i) => (
+          {pendingList.length === 0 ? <p className="text-text-secondary">No hay invitaciones pendientes.</p> : pagedInvites.rows.map((i) => (
             <div key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border-subtle py-2 sm:min-h-row">
               <div className="min-w-0 flex-[2] basis-48">
                 <strong className="block truncate">{invitationLabel(i)}</strong>
@@ -217,6 +222,7 @@ export function TeamPage() {
               </span>
             </div>
           ))}
+          <Pager paged={pagedInvites} noun="invitaciones" className="-mx-4 mt-2" />
         </Panel>}
         {credentials && <Dialog title="Invitación enviada" onClose={() => setCredentials(null)} actions={<Button onClick={() => setCredentials(null)}>Listo</Button>}>
           <div className="flex flex-col gap-3">

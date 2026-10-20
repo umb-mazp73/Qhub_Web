@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatPercent, unwrap, friendlyError, validatePersonName, isValidPhone } from '@qhub/core';
 import { parseTicketStatus } from '@qhub/api-client';
-import { Avatar, Button, ConfirmDialog, Dialog, EmptyState, Icon, IconButton, Kpi, Kpis, Notice, PageHead, Panel, Select, Skeleton, Table, Td, TextField, Th, TurnBadge, useToast } from '@/shared/ui';
+import { Avatar, Button, ConfirmDialog, Dialog, EmptyState, Icon, IconButton, Kpi, Kpis, Notice, PageHead, Pager, Panel, Select, Skeleton, Table, Td, TextField, Th, TurnBadge, usePaged, useToast } from '@/shared/ui';
 import { useContainer, useSession } from '@/app/container';
 import { AutoRefresh } from '@/features/shell/AutoRefresh';
 import { can } from '@/features/staff/permissions';
@@ -118,6 +118,7 @@ function ClientDialog({ client: c, orgId, manage, onClose, onChanged }: { client
   const [confirmRemove, setConfirmRemove] = useState(false);
   const permission = useQuery({ queryKey: ['client-permission', orgId, c.userId], enabled: manage, queryFn: async () => unwrap(await clients.editPermission(orgId, c.userId)) });
   const history = useQuery({ queryKey: ['client-history', orgId, c.userId], queryFn: async () => unwrap(await clients.history(orgId, c.userId, 20)) });
+  const turns = usePaged(history.data ?? [], 6);
   const info = useQuery({ queryKey: ['client-block', orgId, c.userId, c.blocked], enabled: c.blocked, queryFn: async () => unwrap(await clients.blockInfo(orgId, c.userId)) });
 
   async function toggle() {
@@ -151,8 +152,8 @@ function ClientDialog({ client: c, orgId, manage, onClose, onChanged }: { client
       {history.isLoading ? <Skeleton height={80} /> : history.isError ? <Notice kind="error" title={friendlyError(history.error)} /> : (history.data ?? []).length === 0 ? <p className="text-text-secondary">Todavía no tiene turnos.</p> : (
         <div className="overflow-x-auto border border-border-subtle"><Table label={`Turnos de ${clientName(c)}`}>
           <thead><tr><Th>Cola</Th><Th>Turno</Th><Th>Fecha</Th><Th>Estado</Th></tr></thead>
-          <tbody>{(history.data ?? []).map((t) => <tr key={t.id}><Td>{t.queueName ?? '—'}</Td><Td className="font-mono">{t.number ?? '—'}</Td><Td>{fmtDate(t.createdAt)}</Td><Td><TurnBadge status={parseTicketStatus(t.status)} /></Td></tr>)}</tbody>
-        </Table></div>
+          <tbody>{turns.rows.map((t) => <tr key={t.id}><Td>{t.queueName ?? '—'}</Td><Td className="font-mono">{t.number ?? '—'}</Td><Td>{fmtDate(t.createdAt)}</Td><Td><TurnBadge status={parseTicketStatus(t.status)} /></Td></tr>)}</tbody>
+        </Table><Pager paged={turns} noun="turnos" /></div>
       )}
       {manage && (
         <div className="flex flex-col gap-3 border-t border-border-subtle pt-3">
