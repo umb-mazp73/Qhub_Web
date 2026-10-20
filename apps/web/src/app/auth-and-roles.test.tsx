@@ -39,18 +39,29 @@ describe('acceso', () => {
     await user.type(screen.getByLabelText('Nombre de la organización'), 'Notaría 12');
     await user.click(screen.getByRole('button', { name: /Crear organización/ }));
 
-    expect(await screen.findByText('Conecta Notaría 12 con Qhub')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Correo o usuario de Qhub'), 'notaria12');
-    await user.type(screen.getByLabelText('Contraseña'), 'clave-segura-1');
-    await user.click(screen.getByRole('button', { name: /^Conectar/ }));
-
+    // Una sola cuenta: con el correo y la contraseña de la web se entra a Qhub, sin pasar por la pantalla de conectar.
     expect(await screen.findByRole('heading', { level: 1, name: /Ana/ })).toBeInTheDocument();   // aterriza en el inicio
     expect(await screen.findByText('Caja 1')).toBeInTheDocument();
     expect(c.fakes.staff.calls).toContain('createOrg:Notaría 12:empresa');
-    expect(c.fakes.auth.logins).toEqual(['notaria12']);
+    expect(c.fakes.auth.logins).toEqual(['ana@x.co']);
+    expect(c.fakes.auth.registrations).toEqual([]);
     await user.click(within(screen.getByRole('navigation', { name: 'Principal' })).getByRole('link', { name: /^Colas/ }));
     const create = await screen.findByRole('button', { name: /Crear cola/ });
     await waitFor(() => expect(create).toBeEnabled()); // es admin y hay cupo
+  });
+
+  it('si no hay cuenta Qhub con ese correo, la crea con la misma contraseña y conecta', async () => {
+    const m = { ...adminMembership, organization: { ...adminMembership.organization, name: 'Notaría 12', city: 'Quito', country: 'Ecuador', linked: false, qhubConnected: false } };
+    const c = makeContainer({ staff: new FakeStaffRepository({ memberships: [m] }) });
+    c.fakes.auth.loginFailuresOnce = [unauthorizedFailure()];
+    const { user } = await renderWith(<AppRoutes />, c);
+    await user.type(await screen.findByLabelText('Correo de trabajo'), 'ana@x.co');
+    await user.type(screen.getByLabelText('Contraseña'), 'secreto123');
+    await user.click(screen.getByRole('button', { name: 'Continuar' }));
+    expect(await screen.findByRole('heading', { level: 1, name: /Ana/ })).toBeInTheDocument();
+    const [reg] = c.fakes.auth.registrations;
+    expect(reg).toMatchObject({ email: 'ana@x.co', password: 'secreto123', accountType: 'empresa', companyName: 'Notaría 12', username: 'ana', acceptedTerms: true });
+    expect(c.fakes.auth.logins).toEqual(['ana@x.co', 'ana']);
   });
 
   it('una invitación inválida se explica', async () => {

@@ -129,6 +129,8 @@ describe('perfil', () => {
     security.passwordFailure = null;
     await user.click(screen.getByRole('button', { name: /Cambiar contraseña/ }));
     expect(await screen.findByText('Contraseña actualizada.')).toBeInTheDocument();
+    // una sola cuenta: la de Qhub (mismo correo) se cambia con la misma contraseña nueva
+    await waitFor(() => expect(container.fakes.auth.passwordChanges).toEqual([{ identifier: expect.any(String), current: 'vieja1234', next: 'nueva1234' }]));
   });
 
   it('cerrar otras sesiones', async () => {

@@ -136,10 +136,13 @@ export class MemoryTokenStore implements TokenStore {
 
 export class FakeAuthRepository implements AuthRepository {
   loginFailure: Failure | null = null;
+  /** Fallos que se devuelven uno por intento antes de volver al comportamiento normal. */
+  loginFailuresOnce: Failure[] = [];
   logins: string[] = [];
   loginCount = 0;
   async login(identifier: string): Promise<Result<AuthToken>> {
     this.logins.push(identifier); this.loginCount++;
+    const once = this.loginFailuresOnce.shift(); if (once) return err(once);
     if (this.loginFailure) return err(this.loginFailure);
     return ok({ accessToken: `tok${this.loginCount}`, expiresIn: 3600, issuedAt: new Date() });
   }
@@ -147,6 +150,12 @@ export class FakeAuthRepository implements AuthRepository {
   async register(i: RegisterInput): Promise<Result<Registration>> {
     this.registrations.push(i);
     return ok({ accountType: i.accountType, accountId: 'acc1', username: i.username, email: i.email, companyName: i.companyName ?? null, queueLimit: 6, createdAt: new Date() });
+  }
+  passwordChanges: Array<{ identifier: string; current: string; next: string }> = [];
+  changePasswordFailure: Failure | null = null;
+  async changePassword(identifier: string, current: string, next: string): Promise<Result<void>> {
+    this.passwordChanges.push({ identifier, current, next });
+    return this.changePasswordFailure ? err(this.changePasswordFailure) : ok(undefined);
   }
   resetRequests: string[] = [];
   resets: Array<{ token: string; password: string }> = [];

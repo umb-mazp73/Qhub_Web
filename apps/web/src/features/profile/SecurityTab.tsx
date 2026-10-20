@@ -191,6 +191,7 @@ function PasswordSection({ email }: { email: string }) {
 /** El invitado con contraseña asignada (`assignedFlow`) no la conoce: pide solo la nueva y su confirmación y usa `setPassword`. */
 function PasswordPanel({ email, onChanged, lead, assignedFlow = false }: { email: string; onChanged?: () => void; lead?: React.ReactNode; assignedFlow?: boolean }) {
   const { security } = useContainer();
+  const { session } = useSession();
   const toast = useToast();
   const [cur, setCur] = useState('');
   const [next, setNext] = useState('');
@@ -206,7 +207,10 @@ function PasswordPanel({ email, onChanged, lead, assignedFlow = false }: { email
     setBusy(true);
     const r = assignedFlow ? await security.setPassword(next) : await security.changePassword(email, cur, next);
     setBusy(false);
-    if (r.ok) { setCur(''); setNext(''); setAgain(''); toast.show('Contraseña actualizada.'); onChanged?.(); }
+    if (r.ok) {
+      if (!assignedFlow) void session.syncQhubPassword(email, cur, next);      // una sola cuenta: Qhub queda con la misma contraseña (sin estorbar si no se puede)
+      setCur(''); setNext(''); setAgain(''); toast.show('Contraseña actualizada.'); onChanged?.();
+    }
     else if (!assignedFlow && r.failure.kind === 'unauthorized') setErrs({ cur: r.failure.message });
     else toast.show(r.failure.message, { error: true });
   }

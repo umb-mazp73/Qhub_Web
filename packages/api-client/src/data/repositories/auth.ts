@@ -27,4 +27,9 @@ export class AuthRepositoryImpl implements AuthRepository {
       await call(this.t, { method: 'POST', path: '/auth/restablecer', body: { token, password: newPassword } });
     }, mapError);
   }
+  changePassword(identifier: string, current: string, next: string): Promise<Result<void>> {
+    return guard(async () => {
+      await call(this.t, { method: 'POST', path: '/auth/cambiar-clave', body: { identificador: identifier, password_actual: current, password_nueva: next } });
+    }, mapError);
+  }
 }

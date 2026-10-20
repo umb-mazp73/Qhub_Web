@@ -13,6 +13,8 @@ export interface AuthRepository {
   requestPasswordReset(email: string): Promise<Result<void>>;
   /** `POST /auth/restablecer` con el token del enlace del correo. */
   resetPassword(token: string, newPassword: string): Promise<Result<void>>;
+  /** `POST /auth/cambiar-clave`: la cuenta se identifica con su contraseña actual (401 si no coincide). */
+  changePassword(identifier: string, current: string, next: string): Promise<Result<void>>;
 }
 
 export interface QueueRepository {

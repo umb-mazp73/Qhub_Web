@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react';
 import type { Failure } from '@qhub/core';
 import { Button, Checkbox, EmailField, Icon, Logo, Notice, StrengthMeter, TextField, GeneratePassword } from '@/shared/ui';
 import { LoginShowcase } from './LoginShowcase';
-import { useContainer } from '@/app/container';
+import { useContainer, useSession } from '@/app/container';
 import { REMOVED_KEY } from '@/features/session/app-session';
 import { passwordStrength, validateEmail, validatePassword, validatePersonName } from '@qhub/core';
 
@@ -14,6 +14,7 @@ const savedEmail = () => { try { return localStorage.getItem(REMEMBER_KEY) ?? ''
 
 export function LoginPage() {
   const { staff, security } = useContainer();
+  const { session } = useSession();
   const [mode, setMode] = useState<Mode>('login');
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState(savedEmail);
@@ -51,7 +52,9 @@ export function LoginPage() {
       if (!r.ok) setError(r.failure);
       else if (r.value === null) { go('login'); setInfo('Te enviamos un correo para confirmar tu cuenta. Después inicia sesión.'); }
     } else {
+      session.holdPassword(password);     // para crear/conectar la cuenta Qhub con el mismo correo y contraseña
       const r = await staff.signIn(email, password);
+      if (!r.ok) session.holdPassword(null);
       setBusy(false);
       try { if (r.ok && remember) localStorage.setItem(REMEMBER_KEY, email.trim()); else if (r.ok) localStorage.removeItem(REMEMBER_KEY); } catch { /* sin storage */ }
       if (!r.ok) setError(r.failure);
@@ -109,7 +112,7 @@ export function LoginPage() {
             </>
           )}
         </form>
-        <p className="t-caption m-0 flex items-start gap-2 text-text-secondary"><Icon name="info" />© Qhub 2026. Tu contraseña de Qhub nunca se guarda en este navegador.</p>
+        <p className="t-caption m-0 flex items-start gap-2 text-text-secondary"><Icon name="info" />© Qhub 2026. Tu contraseña de Qhub nunca se guarda en este navegador.{mode === 'register' && ' Al crear tu cuenta aceptas los términos de Qhub.'}</p>
       </main>
       <LoginShowcase />
     </div>

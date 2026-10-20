@@ -61,7 +61,7 @@ export function buildContainer(env: AppEnv): Container {
     notifications: new NotificationRepositoryImpl(transport),
     realtime: new RealtimeRepositoryImpl({ wsBaseUrl: env.wsBaseUrl, context }),
     health: new HealthRepositoryImpl(transport),
-    session: new AppSession(staff, new ConnectToQhub(auth, context, tokenStore, qhubLink, new DeviceCredentialVault()), context, security, qhubLink),
+    session: new AppSession(staff, new ConnectToQhub(auth, context, tokenStore, qhubLink, new DeviceCredentialVault()), context, security, qhubLink, auth),
   };
 }
 

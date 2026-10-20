@@ -8,5 +8,5 @@ import type { QhubLinkRepository } from '@/features/qhub/link';
 import type { CredentialVault } from '@/features/qhub/vault';
 
 export function buildTestSession(staff: StaffRepository, auth: AuthRepository, store: TokenStore, security?: SecurityRepository, link?: QhubLinkRepository, vault?: CredentialVault, context = new ApiContext()) {
-  return { context, session: new AppSession(staff, new ConnectToQhub(auth, context, store, link, vault), context, security, link) };
+  return { context, session: new AppSession(staff, new ConnectToQhub(auth, context, store, link, vault), context, security, link, auth) };
 }
