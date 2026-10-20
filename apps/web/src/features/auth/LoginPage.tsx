@@ -1,10 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import type { Failure } from '@qhub/core';
-import { Button, Checkbox, EmailField, Icon, Logo, Notice, StrengthMeter, TextField, GeneratePassword } from '@/shared/ui';
+import { Button, Checkbox, cx, EmailField, Icon, Logo, Notice, StrengthMeter, TextField, GeneratePassword } from '@/shared/ui';
 import { LoginShowcase } from './LoginShowcase';
 import { useContainer, useSession } from '@/app/container';
 import { REMOVED_KEY } from '@/features/session/app-session';
-import { passwordStrength, validateEmail, validatePassword, validatePersonName } from '@qhub/core';
+import { passwordStrength, validateEmail, validateOrgName, validatePassword, validatePersonName } from '@qhub/core';
+import { LocationFields } from '@/features/geo/LocationFields';
+import { ACCOUNT_KINDS, type AccountKind } from '@/features/staff';
+import { pendingInvitation } from '@/features/invitation/pending-invitation';
+import { qhubRegistration } from '@/features/qhub/account';
 
 type Mode = 'login' | 'register' | 'forgot';
 const TITLE: Record<Mode, string> = { login: 'Inicia sesión', register: 'Crea tu cuenta', forgot: 'Recupera tu acceso' };
@@ -13,7 +17,7 @@ const wasRemoved = () => { try { return sessionStorage.getItem(REMOVED_KEY) === 
 const savedEmail = () => { try { return localStorage.getItem(REMEMBER_KEY) ?? ''; } catch { return ''; } };
 
 export function LoginPage() {
-  const { staff, security } = useContainer();
+  const { staff, security, auth } = useContainer();
   const { session } = useSession();
   const [mode, setMode] = useState<Mode>('login');
   const [busy, setBusy] = useState(false);
@@ -23,6 +27,10 @@ export function LoginPage() {
   const [again, setAgain] = useState('');
   const [first, setFirst] = useState('');
   const [last, setLast] = useState('');
+  const [kind, setKind] = useState<AccountKind>('empresa');
+  const [orgName, setOrgName] = useState('');
+  const [loc, setLoc] = useState({ country: 'Ecuador', city: '', timeZone: 'America/Guayaquil' });
+  const withAccount = mode === 'register' && !pendingInvitation();     // quien viene por una invitación se une a un equipo: no crea cuenta nueva
   const [errs, setErrs] = useState<Record<string, string | null>>({});
   const [error, setError] = useState<Failure | null>(null);
   const [info, setInfo] = useState<string | null>(() => (wasRemoved() ? 'Ya no tienes acceso a esa organización: un administrador te quitó del equipo.' : null));
@@ -38,6 +46,8 @@ export function LoginPage() {
       again: register && again !== password ? 'Las contraseñas no coinciden.' : null,
       first: register ? validatePersonName(first, 'tu nombre') : null,
       last: register ? validatePersonName(last, 'tu apellido') : null,
+      orgName: withAccount ? validateOrgName(orgName, kind === 'persona' ? 'tu cuenta (el nombre con el que te verá el público)' : 'la organización') : null,
+      city: withAccount && !loc.city ? 'Elige la ciudad.' : null,
     };
     setErrs(next); setError(null); setInfo(null);
     if (Object.values(next).some(Boolean)) return;
@@ -47,7 +57,12 @@ export function LoginPage() {
       setBusy(false);
       if (!r.ok) setError(r.failure); else setInfo('Si el correo está registrado, te enviamos un enlace para elegir una contraseña nueva. Revisa también el spam. Si eres parte de un equipo, tu administrador debe aprobarlo primero: cuando lo haga, vuelve a pedir el enlace aquí.');
     } else if (register) {
-      const r = await staff.signUp({ email, password, firstName: first, lastName: last });
+      const account = withAccount ? { kind, name: orgName.trim(), country: loc.country, city: loc.city, timeZone: loc.timeZone } : undefined;
+      session.holdPassword(password);      // si entra de una (sin confirmar el correo), con esto se crea y conecta su cuenta Qhub
+      // Una sola cuenta: se crea también en Qhub, con el mismo correo y contraseña (primero, para que al entrar ya exista; si falla, se reintenta al entrar).
+      if (account) await auth.register(qhubRegistration({ kind, orgName: account.name, fullName: `${first} ${last}`, email: email.trim(), password, country: account.country, city: account.city })).catch(() => undefined);
+      const r = await staff.signUp({ email, password, firstName: first, lastName: last, ...(account ? { account } : {}) });
+      if (!r.ok) session.holdPassword(null);
       setBusy(false);
       if (!r.ok) setError(r.failure);
       else if (r.value === null) { go('login'); setInfo('Te enviamos un correo para confirmar tu cuenta. Después inicia sesión.'); }
@@ -91,6 +106,23 @@ export function LoginPage() {
           {mode !== 'forgot' && (
             <TextField label="Contraseña" type="password" revealable value={password} onChange={(e) => setPassword(e.target.value)} error={errs.password}
               helper={mode === 'register' ? 'Mínimo 8 caracteres, con letras y números.' : undefined} autoComplete={mode === 'register' ? 'new-password' : 'current-password'} large />
+          )}
+          {withAccount && (
+            <>
+              <fieldset className="m-0 grid grid-cols-1 gap-2 border-0 p-0 sm:grid-cols-2">
+                <legend className="t-label mb-1 text-text-secondary">¿Cómo vas a usar Qhub?</legend>
+                {ACCOUNT_KINDS.map((k) => (
+                  <label key={k.value} className={cx('flex cursor-pointer flex-col gap-1 border p-3 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-focus', kind === k.value ? 'border-interactive bg-layer-02' : 'border-border-subtle bg-layer-01 hover:bg-layer-hover')}>
+                    <input type="radio" name="tipo-cuenta" value={k.value} checked={kind === k.value} onChange={() => setKind(k.value)} className="sr-only" />
+                    <span className="flex items-center gap-2 font-medium"><Icon name={k.value === 'persona' ? 'user' : 'building'} />{k.label}{kind === k.value && <span className="ml-auto text-interactive"><Icon name="check" /></span>}</span>
+                    <span className="t-caption text-text-secondary">{k.hint}</span>
+                  </label>
+                ))}
+              </fieldset>
+              <TextField label={kind === 'persona' ? 'Nombre con el que te verá el público' : 'Nombre de la organización'} value={orgName} onChange={(e) => setOrgName(e.target.value)} error={errs.orgName}
+                helper={kind === 'persona' ? 'Por ejemplo, tu nombre o el de tu consultorio.' : undefined} />
+              <LocationFields storeAs="name" value={loc} onChange={setLoc} errors={{ city: errs.city }} />
+            </>
           )}
           {mode === 'register' && (
             <>

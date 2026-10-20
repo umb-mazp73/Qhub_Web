@@ -1,5 +1,6 @@
 import { isFailure, unauthorizedFailure, type Failure } from '@qhub/core';
 import type { ApiContext, AuthRepository, RegisterInput } from '@qhub/api-client';
+import { qhubRegistration } from '@/features/qhub/account';
 import type { ConnectToQhub, ConnectionState } from '@/features/qhub/connection';
 import type { QhubLinkRepository } from '@/features/qhub/link';
 import { can, toActorRole, type Membership, type StaffRepository, type StaffUser } from '@/features/staff';
@@ -138,6 +139,8 @@ export class AppSession {
 
   /** La contraseña con la que se inicia sesión en la web; sirve para crear/conectar la cuenta Qhub con el mismo correo y contraseña. */
   holdPassword(password: string | null) { this.pendingPassword = password; }
+  /** ¿Hay una contraseña en memoria? Si entró por el enlace del correo no la escribió, y hay que pedírsela al crear la cuenta. */
+  get hasHeldPassword() { return this.pendingPassword !== null; }
 
   /**
    * Una sola cuenta: con el correo y la contraseña de la web se entra a Qhub; si esa cuenta aún no existe, se crea con los datos
@@ -150,19 +153,14 @@ export class AppSession {
     const first = await this.connect(u.email, pw);
     if (first.ok) return;
     const city = m.organization.city?.trim(); const country = m.organization.country?.trim();
-    if (first.failure.kind !== 'unauthorized' || !this.qhubAuth || !city || !country) { fail(); return; }
+    if (first.failure.kind !== 'unauthorized' || !this.qhubAuth || !city || !country) { fail(first.failure.kind === 'unauthorized' ? undefined : first.failure); return; }
     this.set({ connection: { status: 'connecting', auto: true } });
-    const [firstName, ...rest] = (u.displayName?.trim() || '').split(/\s+/).filter(Boolean);
-    const base = (u.email.split('@')[0] ?? '').toLowerCase().replace(/[^a-z0-9._-]/g, '').replace(/^[^a-z0-9]+/, '').slice(0, 22).padEnd(3, 'x');
     for (let i = 0; i < 4; i++) {
-      const username = i === 0 ? base : `${base}${Math.floor(1000 + Math.random() * 9000)}`;
-      const input: RegisterInput = {
-        accountType: m.organization.kind === 'persona' ? 'usuario' : 'empresa', ...(m.organization.kind === 'persona' ? {} : { companyName: m.organization.name }),
-        firstName: firstName ?? 'Usuario', lastName: rest.join(' ') || firstName || 'Qhub', username, email: u.email, password: pw, country, city, acceptedTerms: true,
-      };
+      const input = qhubRegistration({ kind: m.organization.kind, orgName: m.organization.name, fullName: u.displayName, email: u.email, password: pw, country, city, attempt: i });
+      const username = input.username;
       const r = await this.qhubAuth.register(input);
-      if (r.ok) { const c = await this.connect(username, pw); if (!c.ok) fail(); return; }
-      if (r.failure.kind !== 'conflict') { fail(); return; }       // el correo ya existe en Qhub con otra contraseña: que la persona conecte a mano
+      if (r.ok) { const c = await this.connect(username, pw); if (!c.ok) fail(c.failure); return; }
+      if (r.failure.kind !== 'conflict') { fail(r.failure); return; }       // el correo ya existe en Qhub con otra contraseña: que la persona conecte a mano
     }
     fail();
   }

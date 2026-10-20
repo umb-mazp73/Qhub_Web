@@ -12,7 +12,7 @@ export interface AuthPort {
   onAuthChange(cb: (u: StaffUser | null) => void): () => void;
   signIn(email: string, password: string): Promise<Result<StaffUser>>;
   /** `null` = el proyecto exige confirmar el correo antes de entrar. */
-  signUp(input: { email: string; password: string; firstName: string; lastName: string }): Promise<Result<StaffUser | null>>;
+  signUp(input: { email: string; password: string; firstName: string; lastName: string; account?: NonNullable<StaffUser['pendingOrg']> }): Promise<Result<StaffUser | null>>;
   signOut(): Promise<Result<void>>;
 }
 

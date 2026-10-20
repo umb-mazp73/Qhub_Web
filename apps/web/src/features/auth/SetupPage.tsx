@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Failure } from '@qhub/core';
 import { Button, cx, Icon, Logo, Notice, Panel, Tabs, TextField } from '@/shared/ui';
 import { useContainer, useSession } from '@/app/container';
@@ -11,10 +11,13 @@ export function SetupPage() {
   const { staff } = useContainer();
   const { session } = useSession();
   const [tab, setTab] = useState(0);
-  const [kind, setKind] = useState<AccountKind>('empresa');
-  const [name, setName] = useState('');
-  const [loc, setLoc] = useState({ country: 'Ecuador', city: '', timeZone: 'America/Guayaquil' });
+  const pre = session.user?.pendingOrg;       // lo que eligió al crear la cuenta
+  const [kind, setKind] = useState<AccountKind>(pre?.kind ?? 'empresa');
+  const [name, setName] = useState(pre?.name ?? '');
+  const [loc, setLoc] = useState({ country: pre?.country || 'Ecuador', city: pre?.city ?? '', timeZone: pre?.timeZone || 'America/Guayaquil' });
   const [token, setToken] = useState('');
+  const [pw, setPw] = useState('');
+  const needsPassword = !session.hasHeldPassword;     // entró por el enlace del correo: no la escribió
   const [errs, setErrs] = useState<Record<string, string | null>>({});
   const [error, setError] = useState<Failure | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,11 +30,21 @@ export function SetupPage() {
 
   function create() {
     const e = validateOrgName(name, kind === 'persona' ? 'tu cuenta (el nombre con el que te verá el público)' : 'la organización');
-    setErrs({ name: e }); setError(null);
-    if (e) return;
+    const ep = needsPassword && !pw ? 'Escribe tu contraseña.' : null;
+    setErrs({ name: e, pw: ep }); setError(null);
+    if (e || ep) return;
+    if (needsPassword) session.holdPassword(pw);      // para crear tu cuenta Qhub con el mismo correo y contraseña
     setBusy(true);
     void finish(staff.createOrganization({ name, kind, slug: `${slugify(name)}-${Date.now() % 100000}`, city: loc.city || undefined, country: loc.country || undefined, timeZone: loc.timeZone }));
   }
+  // Ya eligió todo al crear la cuenta: se crea la organización sola (si falta la contraseña, antes se le pide en el formulario).
+  const auto = useRef(false);
+  useEffect(() => {
+    if (!pre || auto.current || !session.hasHeldPassword || !pre.city) return;
+    auto.current = true; create();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function accept() {
     const e = token.trim() ? null : 'Pega el código de invitación.';
     setErrs({ token: e }); setError(null);
@@ -64,6 +77,7 @@ export function SetupPage() {
                 <TextField label={kind === 'persona' ? 'Nombre con el que te verá el público' : 'Nombre de la organización'} value={name} onChange={(e) => setName(e.target.value)} error={errs.name}
                   helper={kind === 'persona' ? 'Por ejemplo, tu nombre o el de tu consultorio.' : undefined} />
                 <LocationFields storeAs="name" value={loc} onChange={setLoc} />
+                {needsPassword && <TextField label="Tu contraseña" type="password" revealable value={pw} onChange={(e) => setPw(e.target.value)} error={errs.pw} autoComplete="current-password" helper="La misma de tu cuenta: con ella creamos tu cuenta Qhub, así usas una sola." />}
                 <Button size="lg" block icon="arrow-right" loading={busy} onClick={create}>{kind === 'persona' ? 'Crear mi cuenta' : 'Crear organización'}</Button>
               </>
             ) : (

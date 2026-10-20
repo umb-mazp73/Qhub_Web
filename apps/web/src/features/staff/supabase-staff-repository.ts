@@ -14,7 +14,9 @@ export class SupabaseStaffRepository implements StaffRepository {
     const meta = u.user_metadata as Row | undefined;
     const name = [meta?.nombre, meta?.apellido].filter((x): x is string => typeof x === 'string' && x.length > 0).join(' ').trim();
     const assigned = (u.app_metadata as Row | undefined)?.clave_asignada === true;
-    return { id: u.id, email: u.email ?? '', ...(name ? { displayName: name } : {}), ...(assigned ? { passwordAssigned: true } : {}) };
+    const c = meta?.cuenta as Row | undefined;
+    const pendingOrg = c && typeof c.nombre === 'string' && c.nombre ? { kind: c.tipo === 'persona' ? 'persona' as const : 'empresa' as const, name: c.nombre, country: String(c.pais ?? ''), city: String(c.ciudad ?? ''), timeZone: String(c.zona_horaria ?? 'America/Guayaquil') } : undefined;
+    return { id: u.id, email: u.email ?? '', ...(name ? { displayName: name } : {}), ...(assigned ? { passwordAssigned: true } : {}), ...(pendingOrg ? { pendingOrg } : {}) };
   }
 
   private async run<T>(body: () => Promise<T>): Promise<Result<T>> {
@@ -45,9 +47,9 @@ export class SupabaseStaffRepository implements StaffRepository {
     });
   }
 
-  signUp(input: { email: string; password: string; firstName: string; lastName: string }) {
+  signUp(input: { email: string; password: string; firstName: string; lastName: string; account?: NonNullable<StaffUser['pendingOrg']> }) {
     return this.run(async () => {
-      const d = await this.q<{ user: User | null; session: unknown }>(this.sb.auth.signUp({ email: input.email.trim(), password: input.password, options: { data: { nombre: input.firstName.trim(), apellido: input.lastName.trim() } } }));
+      const d = await this.q<{ user: User | null; session: unknown }>(this.sb.auth.signUp({ email: input.email.trim(), password: input.password, options: { data: { nombre: input.firstName.trim(), apellido: input.lastName.trim(), ...(input.account ? { cuenta: { tipo: input.account.kind, nombre: input.account.name.trim(), pais: input.account.country, ciudad: input.account.city, zona_horaria: input.account.timeZone } } : {}) } } }));
       // Con la confirmación por correo activada, Supabase no da error si el correo existe: devuelve un usuario sin identidades.
       if (d.user && Array.isArray((d.user as User).identities) && (d.user as User).identities!.length === 0) throw conflictFailure('Ese correo ya está registrado. Inicia sesión o recupera tu contraseña.');
       return d.session ? this.toUser(d.user) : null;

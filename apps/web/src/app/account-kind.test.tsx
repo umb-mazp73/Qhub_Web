@@ -32,6 +32,9 @@ describe('alta: persona u organización', () => {
     expect(screen.getByText('Escribe el nombre de tu cuenta (el nombre con el que te verá el público).')).toBeInTheDocument();
     await user.type(screen.getByLabelText('Nombre con el que te verá el público'), 'Dra. Ana Gómez');
     await user.click(screen.getByRole('button', { name: /Crear mi cuenta/ }));
+    expect(screen.getByText('Escribe tu contraseña.')).toBeInTheDocument();     // entró sin escribirla (p. ej. por el enlace del correo)
+    await user.type(screen.getByLabelText('Tu contraseña'), 'secreto123');
+    await user.click(screen.getByRole('button', { name: /Crear mi cuenta/ }));
     await waitFor(() => expect(staff.calls).toContain('createOrg:Dra. Ana Gómez:persona'));
   });
 
