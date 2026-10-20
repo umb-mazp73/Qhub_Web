@@ -5,6 +5,9 @@ import type { QhubLinkRepository } from '@/features/qhub/link';
 import { can, toActorRole, type Membership, type StaffRepository, type StaffUser } from '@/features/staff';
 import { mfaRequired, type SecurityRepository } from '@/features/security/security';
 
+/** Marca en sessionStorage que a esta persona la quitaron del equipo; el inicio de sesión la lee y la borra. */
+export const REMOVED_KEY = 'qhub.removed';
+
 export type Loadable<T> = { status: 'loading' } | { status: 'ready'; value: T } | { status: 'error'; failure: Failure };
 
 /** Verificación en dos pasos: `checking` mientras se consulta, `required` si falta el código de la app autenticadora. */
@@ -80,10 +83,25 @@ export class AppSession {
     await this.loadMemberships();
   }
 
+  /** Quitaron a esta persona del equipo (o le quitaron el acceso): se cierra su sesión y el inicio de sesión se lo explica. */
+  private async expel() {
+    try { sessionStorage.setItem(REMOVED_KEY, '1'); } catch { /* sin storage */ }
+    await this.signOut();
+  }
+
+  /** Comprueba, sin recargar nada, que la persona siga en su organización con acceso. Si ya no, la saca. Los errores de red se ignoran. */
+  async checkStillMember() {
+    if (!this.user || this.snap.memberships.status !== 'ready' || this.snap.memberships.value.length === 0) return;
+    const r = await this.staff.memberships();
+    if (r.ok && r.value.length === 0 && this.user) await this.expel();
+  }
+
   async loadMemberships() {
     // Si ya hay datos se conservan mientras se recargan (así la pantalla no parpadea ni se reinicia).
     if (this.snap.memberships.status !== 'ready') this.set({ memberships: { status: 'loading' } });
+    const had = this.snap.memberships.status === 'ready' && this.snap.memberships.value.length > 0;
     const r = await this.staff.memberships();
+    if (had && r.ok && r.value.length === 0) { await this.expel(); return; }
     const patch: Partial<SessionSnapshot> = { memberships: r.ok ? { status: 'ready', value: r.value } : { status: 'error', failure: r.failure } };
     // La conexión con Qhub se decide en el mismo instante que llegan las organizaciones (así no se pasa por la pantalla de conectar).
     const m = r.ok ? (r.value[0] ?? null) : null; const u = this.user;

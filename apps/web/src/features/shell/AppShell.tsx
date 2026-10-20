@@ -40,6 +40,13 @@ export function AppShell() {
     const t = NAV.find((n) => pathname.startsWith(n.to))?.label ?? (pathname.startsWith('/colas') ? 'Colas' : null);
     document.title = `${unread > 0 ? `(${unread}) ` : ''}${t ? `${t} · Qhub` : 'Qhub · Administración'}`;
   }, [pathname, unread]);
+  // Si un administrador quita a esta persona del equipo (o le quita el acceso), se entera pronto y sale al inicio de sesión.
+  useEffect(() => {
+    const check = () => { if (document.visibilityState === 'visible') void session.checkStillMember(); };
+    const id = window.setInterval(check, 15_000);
+    document.addEventListener('visibilitychange', check); window.addEventListener('focus', check);
+    return () => { window.clearInterval(id); document.removeEventListener('visibilitychange', check); window.removeEventListener('focus', check); };
+  }, [session]);
   useEffect(() => { setDrawer(false); setMenu(false); main.current?.focus({ preventScroll: true }); pushRecentPage(pathname); }, [pathname]);
   useEffect(() => {
     if (!drawer && !menu) return;
@@ -83,9 +90,9 @@ export function AppShell() {
         <button type="button" aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'} aria-expanded={!collapsed} aria-controls="menu-principal" onClick={toggleCollapsed}
           className="hidden size-10 cursor-pointer items-center justify-center border-0 bg-transparent text-inherit hover:bg-sidebar-hover md:inline-flex"><Icon name="menu" size={20} /></button>
         <Link to="/inicio" aria-label="Ir al inicio" className="inline-flex items-center no-underline"><Logo name="qhub-horizontal-negativo" height={22} /></Link>
-        <span className="hidden min-w-0 shrink items-center gap-2 text-sidebar-text xl:flex"><Icon name="building" />
-          <span className="truncate text-sidebar-text-active">{m?.organization.name}</span>
-          {role && <span className="t-caption text-sidebar-text">· {m?.organization.kind === 'persona' ? 'Cuenta personal' : ORG_ROLE_LABEL[role]}</span>}
+        <span className="hidden min-w-0 shrink items-center gap-2 whitespace-nowrap text-sidebar-text 2xl:flex"><Icon name="building" />
+          <span className="min-w-0 truncate text-sidebar-text-active">{m?.organization.name}</span>
+          {role && <span className="t-caption shrink-0 text-sidebar-text">· {m?.organization.kind === 'persona' ? 'Cuenta personal' : ORG_ROLE_LABEL[role]}</span>}
         </span>
         </div>
         <HeaderSearch />

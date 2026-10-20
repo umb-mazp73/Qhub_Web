@@ -3,11 +3,13 @@ import type { Failure } from '@qhub/core';
 import { Button, Checkbox, EmailField, Icon, Logo, Notice, StrengthMeter, TextField, GeneratePassword } from '@/shared/ui';
 import { LoginShowcase } from './LoginShowcase';
 import { useContainer } from '@/app/container';
+import { REMOVED_KEY } from '@/features/session/app-session';
 import { passwordStrength, validateEmail, validatePassword, validatePersonName } from '@qhub/core';
 
 type Mode = 'login' | 'register' | 'forgot';
 const TITLE: Record<Mode, string> = { login: 'Inicia sesión', register: 'Crea tu cuenta', forgot: 'Recupera tu acceso' };
 const REMEMBER_KEY = 'qhub.email';
+const wasRemoved = () => { try { return sessionStorage.getItem(REMOVED_KEY) === '1'; } catch { return false; } };
 const savedEmail = () => { try { return localStorage.getItem(REMEMBER_KEY) ?? ''; } catch { return ''; } };
 
 export function LoginPage() {
@@ -22,9 +24,9 @@ export function LoginPage() {
   const [last, setLast] = useState('');
   const [errs, setErrs] = useState<Record<string, string | null>>({});
   const [error, setError] = useState<Failure | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(() => (wasRemoved() ? 'Ya no tienes acceso a esa organización: un administrador te quitó del equipo.' : null));
 
-  function go(m: Mode) { setMode(m); setErrs({}); setError(null); setInfo(null); setPassword(''); setAgain(''); }
+  function go(m: Mode) { try { sessionStorage.removeItem(REMOVED_KEY); } catch { /* sin storage */ } setMode(m); setErrs({}); setError(null); setInfo(null); setPassword(''); setAgain(''); }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
