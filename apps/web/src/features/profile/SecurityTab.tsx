@@ -163,10 +163,11 @@ function PasswordSection({ email }: { email: string }) {
   const perm = useQuery({ queryKey: ['my-permission', orgId, 'contrasena'], enabled: gated, queryFn: async () => unwrap(await staff.myPermission(orgId!, 'contrasena')) });
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const assigned = !!session.user?.passwordAssigned;      // invitado con clave asignada: no conoce su contraseña actual
   if (!gated) return <PasswordPanel email={email} />;
   if (perm.isLoading) return <Panel title="Contraseña"><Skeleton height={64} /></Panel>;
   const status = perm.data?.status;
-  if (status === 'aprobada') return <PasswordPanel email={email} onChanged={() => { void staff.spendPasswordPermission(orgId!).then(() => perm.refetch()); }} lead={<Notice kind="success" title="Tu administrador aprobó el cambio." message="Tienes 24 horas y un solo cambio. Después tendrás que pedir permiso de nuevo." />} />;
+  if (status === 'aprobada') return <PasswordPanel email={email} assignedFlow={assigned} onChanged={() => { void staff.spendPasswordPermission(orgId!).then(() => perm.refetch()); }} lead={<Notice kind="success" title="Tu administrador aprobó el cambio." message="Tienes 24 horas y un solo cambio. Después tendrás que pedir permiso de nuevo." />} />;
   async function ask() {
     setBusy(true);
     const r = await staff.requestChange(orgId!, 'contrasena', reason.trim());
@@ -187,7 +188,8 @@ function PasswordSection({ email }: { email: string }) {
   );
 }
 
-function PasswordPanel({ email, onChanged, lead }: { email: string; onChanged?: () => void; lead?: React.ReactNode }) {
+/** El invitado con contraseña asignada (`assignedFlow`) no la conoce: pide solo la nueva y su confirmación y usa `setPassword`. */
+function PasswordPanel({ email, onChanged, lead, assignedFlow = false }: { email: string; onChanged?: () => void; lead?: React.ReactNode; assignedFlow?: boolean }) {
   const { security } = useContainer();
   const toast = useToast();
   const [cur, setCur] = useState('');
@@ -196,21 +198,23 @@ function PasswordPanel({ email, onChanged, lead }: { email: string; onChanged?: 
   const [errs, setErrs] = useState<Record<string, string | null>>({});
   const [busy, setBusy] = useState(false);
   async function change() {
-    const e = { cur: cur ? null : 'Escribe tu contraseña actual.', next: validatePassword(next, { email }) ?? (next === cur ? 'La nueva contraseña debe ser distinta de la actual.' : null), again: again === next ? null : 'Las contraseñas no coinciden.' };
+    const e: Record<string, string | null> = assignedFlow
+      ? { next: validatePassword(next, { email }), again: again === next ? null : 'Las contraseñas no coinciden.' }
+      : { cur: cur ? null : 'Escribe tu contraseña actual.', next: validatePassword(next, { email }) ?? (next === cur ? 'La nueva contraseña debe ser distinta de la actual.' : null), again: again === next ? null : 'Las contraseñas no coinciden.' };
     setErrs(e);
     if (Object.values(e).some(Boolean)) return;
     setBusy(true);
-    const r = await security.changePassword(email, cur, next);
+    const r = assignedFlow ? await security.setPassword(next) : await security.changePassword(email, cur, next);
     setBusy(false);
     if (r.ok) { setCur(''); setNext(''); setAgain(''); toast.show('Contraseña actualizada.'); onChanged?.(); }
-    else if (r.failure.kind === 'unauthorized') setErrs({ cur: r.failure.message });
+    else if (!assignedFlow && r.failure.kind === 'unauthorized') setErrs({ cur: r.failure.message });
     else toast.show(r.failure.message, { error: true });
   }
   return (
     <Panel title="Contraseña">
       {lead && <div className="mb-4 max-w-[420px]">{lead}</div>}
       <form className="flex max-w-[420px] flex-col gap-4" onSubmit={(e) => { e.preventDefault(); void change(); }} noValidate aria-label="Cambiar contraseña">
-        <TextField label="Contraseña actual" type="password" revealable value={cur} onChange={(e) => setCur(e.target.value)} error={errs.cur} autoComplete="current-password" />
+        {!assignedFlow && <TextField label="Contraseña actual" type="password" revealable value={cur} onChange={(e) => setCur(e.target.value)} error={errs.cur} autoComplete="current-password" />}
         <TextField label="Contraseña nueva" type="password" revealable value={next} onChange={(e) => setNext(e.target.value)} error={errs.next} autoComplete="new-password" helper="Mínimo 8 caracteres, con letras y números." />
         <StrengthMeter score={passwordStrength(next)} empty={!next} />
         <GeneratePassword onGenerate={(p) => { setNext(p); setAgain(p); }} />

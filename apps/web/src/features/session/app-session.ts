@@ -107,6 +107,20 @@ export class AppSession {
     return r.ok;
   }
 
+  /** Reconexión automática para quien NO es administrador: usa la conexión guardada en el servidor.
+   *  Si falla, avisa a los administradores. Devuelve 'ok' (reconectó) | 'avisado' (no reconectó, se avisó al admin) | 'error' (sin sesión/organización). */
+  async autoReconnectOrNotify(): Promise<'ok' | 'avisado' | 'error'> {
+    const m = this.membership; const u = this.user;
+    if (!m || !u) return 'error';
+    this.connectUc.disconnect(m.organization.id);                 // descarta el token caduco antes de reintentar (igual que onUnauthorized)
+    this.set({ connection: { status: 'connecting', auto: true } });
+    const r = await this.connectUc.autoConnect({ orgId: m.organization.id, actor: { userId: u.id, role: toActorRole(m.role) }, useServer: true });
+    if (r.ok) { this.set({ connection: { status: 'connected', expiresAt: r.value } }); this.onReconnected?.(); return 'ok'; }
+    this.set({ connection: { status: 'disconnected', ...(r.failure.kind === 'not_found' ? {} : { reason: r.failure }) } });
+    if (this.qhubLink) await this.qhubLink.notifyReconnectNeeded(m.organization.id);  // best-effort
+    return 'avisado';
+  }
+
   /**
    * Conecta con la cuenta Qhub. Con `remember` (por defecto) y siendo administrador, la conexión se guarda en el servidor
    * para no volver a pedirla. Si el servidor no puede, queda guardada cifrada en este dispositivo. `saved` dice dónde quedó (`false` si no).

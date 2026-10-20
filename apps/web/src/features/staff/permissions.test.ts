@@ -11,6 +11,9 @@ describe('permisos', () => {
     expect(can(null, 'dashboard.view')).toBe(false);
   });
   it('rutas', () => { expect(routeAllowed('agente', '/colas')).toBe(true); expect(routeAllowed('agente', '/colas/nueva')).toBe(false); expect(routeAllowed('recepcion', '/perfil')).toBe(true); });
+  // El aviso de contraseña/correo (responder_solicitud_miembro) lleva a /perfil?tab=seguridad: /perfil no exige permiso,
+  // así que el deep-link es navegable para cualquier integrante, incluido el invitado.
+  it('el deep-link de Seguridad (/perfil?tab=seguridad) es navegable para cualquier rol', () => { for (const r of ['admin', 'agente', 'recepcion'] as const) expect(routeAllowed(r, '/perfil?tab=seguridad'), r).toBe(true); });
   it('la API solo conoce admin y agente', () => { expect(toActorRole('admin')).toBe('admin'); for (const x of ['supervisor', 'agente', 'recepcion'] as const) expect(toActorRole(x)).toBe('agente'); });
 });
 describe('permisos de clientes y avisos', () => {

@@ -54,7 +54,7 @@ describe('acceso: recuperación y registro', () => {
     await user.type(screen.getByLabelText('Contraseña nueva', { selector: 'input' }), 'nueva1234');
     await user.type(screen.getByLabelText('Repite la contraseña'), 'nueva1234');
     await user.click(screen.getByRole('button', { name: /Guardar contraseña/ }));
-    await waitFor(() => expect(container.fakes.security.calls).toContain('setPassword'));
+    await waitFor(() => expect(container.fakes.security.calls).toContain('setPassword:nueva1234'));
   });
 });
 

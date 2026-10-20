@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import {
-  badRequestFailure, err, forbiddenFailure, networkFailure, notFoundFailure, ok, serverFailure, unauthorizedFailure,
+  badRequestFailure, err, failureFromSupabase, forbiddenFailure, networkFailure, notFoundFailure, ok, serverFailure, unauthorizedFailure,
   type Failure, type Result,
 } from '@qhub/core';
 import type { AuthToken } from '@qhub/api-client';
@@ -38,4 +38,15 @@ export class SupabaseQhubLinkRepository implements QhubLinkRepository {
   publish(orgId: string) { return this.act({ organizacion_id: orgId, accion: 'publicar' }); }
   unpublish(orgId: string) { return this.act({ organizacion_id: orgId, accion: 'despublicar' }); }
   disconnect(orgId: string) { return this.act({ organizacion_id: orgId, accion: 'desvincular' }); }
+
+  private async run<T>(body: () => Promise<T>): Promise<Result<T>> {
+    try { return ok(await body()); } catch (e) { return err(failureFromSupabase(e) as Failure); }
+  }
+  notifyReconnectNeeded(orgId: string): Promise<Result<boolean>> {
+    return this.run(async () => {
+      const { data, error } = await this.sb.rpc('avisar_reconexion_qhub', { p_org: orgId });
+      if (error) throw error;
+      return Boolean(data);
+    });
+  }
 }

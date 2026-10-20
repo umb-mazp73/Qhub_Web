@@ -16,4 +16,6 @@ export interface QhubLinkRepository {
   unpublish(orgId: string): Promise<Result<void>>;
   /** Olvida la conexión guardada (y oculta la organización del móvil). */
   disconnect(orgId: string): Promise<Result<void>>;
+  /** Avisa a los administradores de que hace falta reconectar la cuenta de Qhub; lo llama un integrante que no pudo reconectar. */
+  notifyReconnectNeeded(orgId: string): Promise<Result<boolean>>;
 }

@@ -157,7 +157,8 @@ describe('invitar con contraseña inicial y permisos de cambio', () => {
     staff.permission = { status: 'aprobada', expiresAt: new Date(Date.now() + 864e5) };
     const { user } = await renderWith(<AppRoutes />, makeContainer({ staff, tokenStore: savedToken() }), '/perfil?tab=seguridad');
     expect(await screen.findByText('Tu administrador aprobó el cambio.')).toBeInTheDocument();
-    await user.type(screen.getByLabelText('Contraseña actual'), 'Vieja-clave-12');
+    // El invitado con clave asignada no la conoce: solo escribe la nueva y la confirmación.
+    expect(screen.queryByLabelText('Contraseña actual')).toBeNull();
     await user.type(screen.getByLabelText('Contraseña nueva'), 'Taza-azul-77');
     await user.type(screen.getByLabelText('Repite la contraseña nueva'), 'Taza-azul-77');
     await user.click(screen.getByRole('button', { name: 'Cambiar contraseña' }));

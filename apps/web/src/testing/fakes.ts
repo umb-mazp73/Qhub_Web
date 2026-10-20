@@ -285,7 +285,10 @@ export class FakeSecurity implements SecurityRepository {
   calls: string[] = [];
   passwordFailure: Failure | null = null;
   async requestPasswordReset(email: string): Promise<Result<void>> { this.calls.push(`reset:${email}`); return ok(undefined); }
-  async setPassword(): Promise<Result<void>> { this.calls.push('setPassword'); return ok(undefined); }
+  async setPassword(password: string): Promise<Result<void>> {
+    this.calls.push(`setPassword:${password}`);
+    return this.passwordFailure ? err(this.passwordFailure) : ok(undefined);
+  }
   async changePassword(_e: string, current: string): Promise<Result<void>> {
     this.calls.push(`changePassword:${current}`);
     return this.passwordFailure ? err(this.passwordFailure) : ok(undefined);
@@ -327,6 +330,7 @@ export class FakeQhubLink implements QhubLinkRepository {
   issueFailure: Failure | null = null;
   connectFailure: Failure | null = null;
   publishFailure: Failure | null = null;
+  notifyFailure: Failure | null = null;
   issued = 0;
   async issueToken(orgId: string): Promise<Result<AuthToken>> {
     this.calls.push(`issue:${orgId}`); this.issued++;
@@ -336,6 +340,7 @@ export class FakeQhubLink implements QhubLinkRepository {
   async publish(orgId: string): Promise<Result<void>> { this.calls.push(`publish:${orgId}`); return this.publishFailure ? err(this.publishFailure) : ok(undefined); }
   async unpublish(orgId: string): Promise<Result<void>> { this.calls.push(`unpublish:${orgId}`); return ok(undefined); }
   async disconnect(orgId: string): Promise<Result<void>> { this.calls.push(`disconnect:${orgId}`); return ok(undefined); }
+  async notifyReconnectNeeded(orgId: string): Promise<Result<boolean>> { this.calls.push(`notifyReconnect:${orgId}`); return this.notifyFailure ? err(this.notifyFailure) : ok(true); }
 }
 
 
