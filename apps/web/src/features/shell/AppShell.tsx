@@ -92,7 +92,7 @@ export function AppShell() {
         <Link to="/inicio" aria-label="Ir al inicio" className="inline-flex items-center no-underline"><Logo name="qhub-horizontal-negativo" height={22} /></Link>
         <span className="hidden min-w-0 shrink items-center gap-2 whitespace-nowrap text-sidebar-text 2xl:flex"><Icon name="building" />
           <span className="min-w-0 truncate text-sidebar-text-active">{m?.organization.name}</span>
-          {role && <span className="t-caption shrink-0 text-sidebar-text">· {m?.organization.kind === 'persona' ? 'Cuenta personal' : ORG_ROLE_LABEL[role]}</span>}
+          {role && <span className="t-caption shrink-0 text-sidebar-text">· {m?.organization.kind === 'persona' ? 'Cuenta personal' : m?.isMaster ? 'Master' : ORG_ROLE_LABEL[role]}</span>}
         </span>
         </div>
         <HeaderSearch />

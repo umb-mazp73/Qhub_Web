@@ -92,9 +92,9 @@ export class SupabaseStaffRepository implements StaffRepository {
     return this.run(async () => {
       const { data: u } = await this.sb.auth.getUser();
       if (!u.user) throw unauthorizedFailure();
-      const rows = await this.q<Row[]>(this.sb.from('miembros').select('rol, activo, organizaciones(*)').eq('usuario_id', u.user.id).eq('activo', true) as unknown as PromiseLike<{ data: Row[]; error: unknown }>);
+      const rows = await this.q<Row[]>(this.sb.from('miembros').select('rol, activo, es_master, organizaciones(*)').eq('usuario_id', u.user.id).eq('activo', true) as unknown as PromiseLike<{ data: Row[]; error: unknown }>);
       return rows.filter((r) => r.organizaciones && typeof r.organizaciones === 'object')
-        .map((r): Membership => { const organization = this.org(r.organizaciones as Row); return { organization, role: effectiveRole(parseOrgRole(r.rol), organization.kind) }; });
+        .map((r): Membership => { const organization = this.org(r.organizaciones as Row); return { organization, role: effectiveRole(parseOrgRole(r.rol), organization.kind), isMaster: Boolean(r.es_master) }; });
     });
   }
 
@@ -116,11 +116,11 @@ export class SupabaseStaffRepository implements StaffRepository {
 
   members(orgId: string) {
     return this.run(async () => {
-      const rows = await this.q<Row[]>(this.sb.from('miembros').select('usuario_id, rol, activo, perfiles(nombre, apellido)').eq('organizacion_id', orgId).order('creado_en') as unknown as PromiseLike<{ data: Row[]; error: unknown }>);
+      const rows = await this.q<Row[]>(this.sb.from('miembros').select('usuario_id, rol, activo, es_master, perfiles(nombre, apellido)').eq('organizacion_id', orgId).order('creado_en') as unknown as PromiseLike<{ data: Row[]; error: unknown }>);
       return rows.map((r): Member => {
         const p = r.perfiles as Row | undefined;
         const name = `${p?.nombre ?? ''} ${p?.apellido ?? ''}`.trim();
-        return { userId: String(r.usuario_id), name: name || 'Sin nombre', role: parseOrgRole(r.rol), active: Boolean(r.activo) };
+        return { userId: String(r.usuario_id), name: name || 'Sin nombre', role: parseOrgRole(r.rol), active: Boolean(r.activo), isMaster: Boolean(r.es_master) };
       });
     });
   }

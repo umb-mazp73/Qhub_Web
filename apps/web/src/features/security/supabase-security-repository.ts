@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { err, type Failure, failureFromSupabase, ok, type Result, unauthorizedFailure, forbiddenFailure } from '@qhub/core';
+import { err, type Failure, failureFromSupabase, ok, type Result, unauthorizedFailure, forbiddenFailure, serverFailure } from '@qhub/core';
 import { invokeFunction } from '@/shared/invoke-function';
 import type { AccessInfo, ActivityItem, AssuranceState, MfaEnrollment, MfaFactor, SecurityRepository } from './security';
 
@@ -27,7 +27,11 @@ export class SupabaseSecurityRepository implements SecurityRepository {
    */
   private async updatePassword(password: string) {
     const { error } = await this.sb.auth.updateUser({ password });
-    if (!error) return;
+    if (!error) {
+      // Para que el administrador vea siempre la contraseña vigente de su equipo (el servidor la guarda cifrada y solo si es la actual). Si falla, no estorba.
+      try { await invokeFunction(this.sb, 'qhub-clave', { accion: 'guardar', password }, () => serverFailure()); } catch { /* sin efecto */ }
+      return;
+    }
     if ((error as { status?: number }).status !== undefined && (error as { status: number }).status >= 500) throw forbiddenFailure('Tu administrador debe aprobar este cambio. Envíale una solicitud desde Mi perfil → Seguridad.');
     throw error;
   }

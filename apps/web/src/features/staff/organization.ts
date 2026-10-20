@@ -10,11 +10,11 @@ export const spaceName = (k: AccountKind) => (k === 'persona' ? 'cuenta personal
 
 /** `qhubConnected`: la conexión con Qhub ya se confirmó una vez (lo registra la base de datos); con eso no se vuelve a mostrar la pantalla de conectar. */
 export interface Organization { id: string; /** ID público corto (QH-XXXXXX) para que los clientes la encuentren en la app móvil */ code: string; kind: AccountKind; qhubConnected: boolean; name: string; slug: string; timeZone: string; city?: string | null; country?: string | null; published: boolean; linked: boolean }
-export interface Membership { organization: Organization; role: OrgRole }
+export interface Membership { organization: Organization; role: OrgRole; /** Dueño de la organización: el único que puede quitar o cambiar a otros administradores. */ isMaster?: boolean }
 export const isAdmin = (m: Membership | null | undefined) => m?.role === 'admin' || m?.role === 'propietario';
 /** Perfil básico de alguien del equipo, tal como lo ve y edita un administrador. */
 export interface MemberProfile { firstName: string; lastName: string; position: string; phone: string; email: string }
-export interface Member { userId: string; name: string; role: OrgRole; active: boolean }
+export interface Member { userId: string; name: string; role: OrgRole; active: boolean; isMaster?: boolean }
 /** Lo que el administrador deja configurado para la persona invitada (todo opcional). */
 export interface InviteProfile { firstName?: string; lastName?: string; position?: string }
 export interface Invitation extends InviteProfile { id: string; email: string; role: OrgRole; token: string; expiresAt: Date; acceptedAt: Date | null; sentAt?: Date | null }

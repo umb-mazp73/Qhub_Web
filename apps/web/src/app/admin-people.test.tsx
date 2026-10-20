@@ -112,9 +112,10 @@ describe('invitar con contraseña inicial y permisos de cambio', () => {
     const { user } = await renderWith(<AppRoutes />, makeContainer({ staff, tokenStore: savedToken() }), '/equipo');
     await screen.findByText('Luis Vera');
     await user.type(screen.getByLabelText('Correo'), 'nuevo@x.co');
-    await user.type(screen.getByLabelText('Contraseña inicial (opcional)'), '12345678');
+    await user.type(screen.getByLabelText('Nombre'), 'Nora'); await user.type(screen.getByLabelText('Apellido'), 'Mena'); await user.type(screen.getByLabelText('Cargo'), 'Caja');
+    await user.type(screen.getByLabelText('Contraseña inicial'), '12345678');
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));
-    expect(screen.getByLabelText('Contraseña inicial (opcional)')).toHaveAttribute('aria-invalid', 'true');      // '12345678' es una contraseña débil
+    expect(screen.getByLabelText('Contraseña inicial')).toHaveAttribute('aria-invalid', 'true');      // '12345678' es una contraseña débil
     expect(staff.calls.filter((c) => c.startsWith('invite:'))).toEqual([]);
     await user.click(screen.getByRole('button', { name: 'Generar' }));
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));

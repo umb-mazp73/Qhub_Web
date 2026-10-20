@@ -16,6 +16,8 @@ export function TeamPage() {
   const orgId = session.membership!.organization.id;
   const me = session.user?.id;
   const canManage = can(session.membership?.role, 'team.manage');
+  const iAmMaster = !!session.membership?.isMaster;
+  const assignable = iAmMaster ? ROLES : ROLES.filter((o) => o.value !== 'admin');     // solo el master puede dar el rol de administrador
   const members = useQuery({ queryKey: ['members', orgId], queryFn: async () => unwrap(await staff.members(orgId)) });
   const invitations = useQuery({ queryKey: ['invitations', orgId], queryFn: async () => unwrap(await staff.invitations(orgId)) });
   const [email, setEmail] = useState('');
@@ -50,13 +52,12 @@ export function TeamPage() {
   async function invite() {
     const e = validateEmail(email)
       ?? (session.user?.email && email.trim().toLowerCase() === session.user.email.toLowerCase() ? 'Ese es tu propio correo.' : null);
-    const opt = (v: string, what: string) => (v.trim() ? validatePersonName(v, what) : null);
-    const n = { first: opt(first, 'el nombre'), last: opt(last, 'el apellido'), position: position.trim() && position.trim().length < 2 ? 'Escribe el cargo completo.' : null };
-    const pe = password ? validatePassword(password, { email }) : null;
+    const n = { first: validatePersonName(first, 'el nombre'), last: validatePersonName(last, 'el apellido'), position: position.trim().length < 2 ? 'Escribe el cargo.' : null };
+    const pe = password ? validatePassword(password, { email }) : 'Escribe o genera una contraseña inicial.';
     setEmailErr(e); setErrs(n); setPwErr(pe);
     if (e || n.first || n.last || n.position || pe) return;
     setBusy(true);
-    const r = await staff.invite(orgId, { email: email.trim(), role, ...(password ? { password } : {}), ...(first.trim() ? { firstName: first.trim() } : {}), ...(last.trim() ? { lastName: last.trim() } : {}), ...(position.trim() ? { position: position.trim() } : {}) });
+    const r = await staff.invite(orgId, { email: email.trim(), role, password, firstName: first.trim(), lastName: last.trim(), position: position.trim() });
     setBusy(false);
     if (!r.ok) { toast.show(r.failure.message, { error: true }); return; }
     const given = password;
@@ -110,20 +111,20 @@ export function TeamPage() {
       <div className="flex flex-col gap-4">
         {canManage && <Panel title="Invitar a alguien">
           <div className="flex flex-col gap-3">
-            <p className="t-caption m-0 text-text-secondary">Le enviamos un correo con un botón para aceptar. Si quieres, déjale el perfil listo: al aceptar entra directo.</p>
+            <p className="t-caption m-0 text-text-secondary">Le enviamos un correo con un botón para aceptar. Deja su perfil listo: al aceptar entra directo.</p>
             <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-start">
               <div className="flex-[2]"><EmailField label="Correo" value={email} onValueChange={(v) => { setEmail(v); setEmailErr(null); }} error={emailErr} /></div>
-              <div className="flex-1"><Select<OrgRole> label="Rol" value={role} options={ROLES} onValueChange={setRole} /></div>
+              <div className="flex-1"><Select<OrgRole> label="Rol" value={role} options={assignable} onValueChange={setRole} /></div>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="flex-1"><TextField label="Nombre (opcional)" value={first} onChange={(e) => { setFirst(e.target.value); setErrs((x) => ({ ...x, first: null })); }} error={errs.first} maxLength={60} autoComplete="off" /></div>
-              <div className="flex-1"><TextField label="Apellido (opcional)" value={last} onChange={(e) => { setLast(e.target.value); setErrs((x) => ({ ...x, last: null })); }} error={errs.last} maxLength={60} autoComplete="off" /></div>
-              <div className="flex-1"><TextField label="Cargo (opcional)" value={position} onChange={(e) => { setPosition(e.target.value); setErrs((x) => ({ ...x, position: null })); }} error={errs.position} maxLength={80} autoComplete="off" /></div>
+              <div className="flex-1"><TextField label="Nombre" value={first} onChange={(e) => { setFirst(e.target.value); setErrs((x) => ({ ...x, first: null })); }} error={errs.first} maxLength={60} autoComplete="off" /></div>
+              <div className="flex-1"><TextField label="Apellido" value={last} onChange={(e) => { setLast(e.target.value); setErrs((x) => ({ ...x, last: null })); }} error={errs.last} maxLength={60} autoComplete="off" /></div>
+              <div className="flex-1"><TextField label="Cargo" value={position} onChange={(e) => { setPosition(e.target.value); setErrs((x) => ({ ...x, position: null })); }} error={errs.position} maxLength={80} autoComplete="off" /></div>
             </div>
             <div className="flex flex-col gap-2">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
-                <div className="flex-1"><TextField label="Contraseña inicial (opcional)" type="password" revealable value={password} onChange={(e) => { setPassword(e.target.value); setPwErr(null); }} error={pwErr}
-                  autoComplete="new-password" helper="Si la pones, la persona entra con su correo y esta contraseña. Después solo podrá cambiarla con tu permiso." /></div>
+                <div className="flex-1"><TextField label="Contraseña inicial" type="password" revealable value={password} onChange={(e) => { setPassword(e.target.value); setPwErr(null); }} error={pwErr}
+                  autoComplete="new-password" helper="La persona entra con su correo y esta contraseña. Después solo podrá cambiarla con tu permiso." /></div>
                 <div className="sm:pt-5"><Button kind="secondary" onClick={() => { setPassword(generatePassword()); setPwErr(null); }}>Generar</Button></div>
               </div>
               {password && <StrengthMeter score={passwordStrength(password)} empty={false} />}
@@ -165,24 +166,25 @@ export function TeamPage() {
             <ul className="m-0 list-none p-0">
               {(members.data ?? []).map((m) => {
                 const self = m.userId === me;
+                const untouchable = !!m.isMaster || (m.role === 'admin' && !iAmMaster);     // al master no lo toca nadie; a un admin solo el master
                 return (
                   <li key={m.userId} className="flex flex-col gap-x-4 gap-y-3 border-t border-border-subtle py-3 first:border-t-0 lg:grid lg:grid-cols-[minmax(0,1fr)_220px_auto_auto] lg:items-center">
                     <div className="flex min-w-0 items-center gap-3">
                       <Avatar size="sm" text={initialsOf(m.name, '')} />
                       <div className="min-w-0">
-                        <strong className="block truncate">{m.name}{self ? ' (tú)' : ''}</strong>
+                        <strong className="block truncate">{m.name}{self ? ' (tú)' : ''}{m.isMaster && <span className="t-caption ml-2 font-normal text-text-secondary">· Master</span>}</strong>
                         <span className={cx('t-caption inline-flex items-center gap-1', m.active ? 'text-state-done-text' : 'text-text-secondary')}><Icon name={m.active ? 'check' : 'close'} size={12} />{m.active ? 'Activo' : 'Inactivo'}</span>
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-3 lg:contents">
                       <div className="w-full sm:w-auto sm:flex-1 lg:w-auto lg:flex-none">
-                        <Select<OrgRole> hideLabel label={`Rol de ${m.name}`} value={m.role} options={ROLES} disabled={self || !canManage} onValueChange={(r) => void change(m.userId, { role: r })} />
+                        <Select<OrgRole> hideLabel label={`Rol de ${m.name}`} value={m.role} options={m.role === 'admin' ? ROLES : assignable} disabled={self || !canManage || untouchable} onValueChange={(r) => void change(m.userId, { role: r })} />
                       </div>
-                      <label className={cx('inline-flex items-center gap-2', canManage && !self ? 'cursor-pointer' : 'cursor-not-allowed text-text-disabled')}>
-                        <input type="checkbox" role="switch" aria-label={`${m.name} activo`} checked={m.active} disabled={self || !canManage} onChange={(e) => void change(m.userId, { active: e.target.checked })} className="size-[18px] accent-interactive" />
+                      <label className={cx('inline-flex items-center gap-2', canManage && !self && !untouchable ? 'cursor-pointer' : 'cursor-not-allowed text-text-disabled')}>
+                        <input type="checkbox" role="switch" aria-label={`${m.name} activo`} checked={m.active} disabled={self || !canManage || untouchable} onChange={(e) => void change(m.userId, { active: e.target.checked })} className="size-[18px] accent-interactive" />
                         <span className="t-caption">Acceso</span>
                       </label>
-                      {canManage && !self ? <span className="flex flex-wrap items-center gap-1 lg:justify-end">
+                      {canManage && !self && !untouchable ? <span className="flex flex-wrap items-center gap-1 lg:justify-end">
                         <Button kind="tertiary" size="sm" loading={working === m.userId} onClick={() => void viewPassword(m)}>Ver contraseña</Button>
                         <Button kind="tertiary" size="sm" onClick={() => setEditing(m)}>Editar</Button>
                         <IconButton icon="trash" label={`Quitar a ${m.name} del equipo`} onClick={() => setRemoving(m)} />
@@ -227,13 +229,13 @@ export function TeamPage() {
         </Dialog>}
         {assigned && <Dialog title={`Contraseña asignada de ${assigned.name}`} onClose={() => setAssigned(null)} actions={<Button onClick={() => setAssigned(null)}>Listo</Button>}>
           <div className="flex flex-col gap-3">
-            <Notice kind="warning" title="Es la contraseña inicial que asignaste." message="Puede estar desactualizada si la persona ya la cambió. Compártela solo por un canal seguro." />
+            <Notice kind="warning" title="Es la contraseña actual de esta persona." message="Se actualiza sola cuando la cambia. Compártela solo por un canal seguro." />
             {assigned.password !== null ? <>
               <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border border-border-subtle bg-layer-02 p-4">
                 <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0 font-mono">{assigned.password}</dd>
               </dl>
               <div><Button kind="secondary" icon="copy" onClick={async () => { await navigator.clipboard?.writeText(assigned.password!); toast.show('Contraseña copiada.'); }}>Copiar contraseña</Button></div>
-            </> : <p className="m-0 text-text-secondary">Este miembro no tiene una contraseña asignada visible (quizá la cambió). Puedes restablecerla.</p>}
+            </> : <p className="m-0 text-text-secondary">Todavía no tenemos guardada la contraseña de esta persona (entró antes de que las guardáramos). En cuanto la cambie desde Mi perfil, aparecerá aquí.</p>}
           </div>
         </Dialog>}
         {editing && <EditMemberDialog member={editing} orgId={orgId} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void qc.invalidateQueries({ queryKey: ['members', orgId] }); toast.show('Perfil actualizado.'); }} />}
@@ -263,7 +265,7 @@ function EditMemberDialog({ member, orgId, onClose, onSaved }: { member: Member;
     if (!v) return;
     const e = {
       firstName: validatePersonName(v.firstName, 'el nombre'), lastName: validatePersonName(v.lastName, 'el apellido'),
-      position: v.position.trim() && v.position.trim().length < 2 ? 'Escribe el cargo completo.' : null,
+      position: v.position.trim().length < 2 ? 'Escribe el cargo.' : null,
       phone: v.phone.trim() && !isValidPhone(v.phone) ? 'Escribe un teléfono válido, con 7 a 15 dígitos.' : null,
     };
     setErrs(e);
@@ -282,7 +284,7 @@ function EditMemberDialog({ member, orgId, onClose, onSaved }: { member: Member;
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <TextField label="Nombre" value={v.firstName} onChange={(e) => set('firstName', e.target.value)} error={errs.firstName} maxLength={60} />
             <TextField label="Apellido" value={v.lastName} onChange={(e) => set('lastName', e.target.value)} error={errs.lastName} maxLength={60} />
-            <TextField label="Cargo (opcional)" value={v.position} onChange={(e) => set('position', e.target.value)} error={errs.position} maxLength={80} />
+            <TextField label="Cargo" value={v.position} onChange={(e) => set('position', e.target.value)} error={errs.position} maxLength={80} />
             <TextField label="Teléfono (opcional)" type="tel" value={v.phone} onChange={(e) => set('phone', e.target.value)} error={errs.phone} autoComplete="off" />
           </div>
         </div>

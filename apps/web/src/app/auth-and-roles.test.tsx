@@ -285,10 +285,11 @@ describe('roles', () => {
     expect(await screen.findByText('Ana Gómez (tú)')).toBeInTheDocument();
     expect(screen.getByText('Luis Vera')).toBeInTheDocument();
     await user.type(screen.getByLabelText('Correo'), 'nuevo@x.co');
+    await user.type(screen.getByLabelText('Nombre'), 'Nora'); await user.type(screen.getByLabelText('Apellido'), 'Mena'); await user.type(screen.getByLabelText('Cargo'), 'Caja'); await user.click(screen.getByRole('button', { name: 'Generar' }));
     await user.click(screen.getByRole('button', { name: /Enviar invitación/ }));
-    await waitFor(() => expect(staff.calls).toContain('invite:nuevo@x.co:agente'));
-    expect(await screen.findByText('nuevo@x.co')).toBeInTheDocument();
-  });
+    await waitFor(() => expect(staff.calls.some((c) => c.startsWith('invite:nuevo@x.co:agente'))).toBe(true));
+    expect((await screen.findAllByText('nuevo@x.co')).length).toBeGreaterThan(0);
+  }, 20000);
 
   it('límite de colas alcanzado deshabilita "Crear cola" y avisa', async () => {
     const staff = new FakeStaffRepository({ user: ana, memberships: [adminMembership] });

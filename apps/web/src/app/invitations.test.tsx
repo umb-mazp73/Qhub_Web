@@ -21,9 +21,9 @@ describe('equipo: invitar por correo', () => {
   it('invita con el perfil configurado y avisa que se envió el correo', async () => {
     const { user, staff } = await openTeam();
     await user.type(screen.getByLabelText('Correo'), 'carla@x.co');
-    await user.type(screen.getByLabelText('Nombre (opcional)'), 'Carla');
-    await user.type(screen.getByLabelText('Apellido (opcional)'), 'Mena');
-    await user.type(screen.getByLabelText('Cargo (opcional)'), 'Caja');
+    await user.type(screen.getByLabelText('Nombre'), 'Carla');
+    await user.type(screen.getByLabelText('Apellido'), 'Mena');
+    await user.type(screen.getByLabelText('Cargo'), 'Caja'); await user.click(screen.getByRole('button', { name: 'Generar' }));
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));
     expect(await screen.findByText('Enviamos la invitación a carla@x.co.')).toBeInTheDocument();
     expect(staff.invitationsList[0]).toMatchObject({ email: 'carla@x.co', firstName: 'Carla', lastName: 'Mena', position: 'Caja' });
@@ -39,7 +39,7 @@ describe('equipo: invitar por correo', () => {
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));
     expect(screen.getByText('Ese es tu propio correo.')).toBeInTheDocument();
     await user.clear(screen.getByLabelText('Correo')); await user.type(screen.getByLabelText('Correo'), 'luis@x.co');
-    await user.type(screen.getByLabelText('Nombre (opcional)'), 'R2D2');
+    await user.type(screen.getByLabelText('Nombre'), 'R2D2');
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));
     expect(screen.getByText('Usa solo letras, sin números ni símbolos.')).toBeInTheDocument();
     expect(staff.calls.filter((c) => c.startsWith('invite:'))).toEqual([]);
@@ -48,6 +48,7 @@ describe('equipo: invitar por correo', () => {
   it('si la persona ya es del equipo lo dice, sin crear nada', async () => {
     const { user, staff } = await openTeam();
     await user.type(screen.getByLabelText('Correo'), 'miembro@x.co');
+    await user.type(screen.getByLabelText('Nombre'), 'Luis'); await user.type(screen.getByLabelText('Apellido'), 'Mena'); await user.type(screen.getByLabelText('Cargo'), 'Caja'); await user.click(screen.getByRole('button', { name: 'Generar' }));
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));
     expect(await screen.findByText('Esa persona ya es parte del equipo.')).toBeInTheDocument();
     expect(staff.invitationsList).toEqual([]);
@@ -57,6 +58,7 @@ describe('equipo: invitar por correo', () => {
     const staff = new FakeStaffRepository({ user: ana, memberships: [adminMembership] }); staff.emailSends = false;
     const { user } = await openTeam(staff);
     await user.type(screen.getByLabelText('Correo'), 'luis@x.co');
+    await user.type(screen.getByLabelText('Nombre'), 'Luis'); await user.type(screen.getByLabelText('Apellido'), 'Mena'); await user.type(screen.getByLabelText('Cargo'), 'Caja'); await user.click(screen.getByRole('button', { name: 'Generar' }));
     await user.click(screen.getByRole('button', { name: 'Enviar invitación' }));
     expect(await screen.findByText(/hay demasiados correos seguidos/)).toBeInTheDocument();
     expect(staff.invitationsList).toHaveLength(1);
