@@ -166,7 +166,7 @@ export function TeamPage() {
               {(members.data ?? []).map((m) => {
                 const self = m.userId === me;
                 return (
-                  <li key={m.userId} className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 border-t border-border-subtle py-3 first:border-t-0 lg:grid-cols-[minmax(0,1fr)_220px_auto_auto]">
+                  <li key={m.userId} className="flex flex-col gap-x-4 gap-y-3 border-t border-border-subtle py-3 first:border-t-0 lg:grid lg:grid-cols-[minmax(0,1fr)_220px_auto_auto] lg:items-center">
                     <div className="flex min-w-0 items-center gap-3">
                       <Avatar size="sm" text={initialsOf(m.name, '')} />
                       <div className="min-w-0">
@@ -174,18 +174,20 @@ export function TeamPage() {
                         <span className={cx('t-caption inline-flex items-center gap-1', m.active ? 'text-state-done-text' : 'text-text-secondary')}><Icon name={m.active ? 'check' : 'close'} size={12} />{m.active ? 'Activo' : 'Inactivo'}</span>
                       </div>
                     </div>
-                    <div className="col-span-2 lg:col-span-1">
-                      <Select<OrgRole> hideLabel label={`Rol de ${m.name}`} value={m.role} options={ROLES} disabled={self || !canManage} onValueChange={(r) => void change(m.userId, { role: r })} />
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-3 lg:contents">
+                      <div className="w-full sm:w-auto sm:flex-1 lg:w-auto lg:flex-none">
+                        <Select<OrgRole> hideLabel label={`Rol de ${m.name}`} value={m.role} options={ROLES} disabled={self || !canManage} onValueChange={(r) => void change(m.userId, { role: r })} />
+                      </div>
+                      <label className={cx('inline-flex items-center gap-2', canManage && !self ? 'cursor-pointer' : 'cursor-not-allowed text-text-disabled')}>
+                        <input type="checkbox" role="switch" aria-label={`${m.name} activo`} checked={m.active} disabled={self || !canManage} onChange={(e) => void change(m.userId, { active: e.target.checked })} className="size-[18px] accent-interactive" />
+                        <span className="t-caption">Acceso</span>
+                      </label>
+                      {canManage && !self ? <span className="flex flex-wrap items-center gap-1 lg:justify-end">
+                        <Button kind="tertiary" size="sm" loading={working === m.userId} onClick={() => void viewPassword(m)}>Ver contraseña</Button>
+                        <Button kind="tertiary" size="sm" onClick={() => setEditing(m)}>Editar</Button>
+                        <IconButton icon="trash" label={`Quitar a ${m.name} del equipo`} onClick={() => setRemoving(m)} />
+                      </span> : <span className="hidden lg:block" />}
                     </div>
-                    <label className={cx('inline-flex items-center gap-2', canManage && !self ? 'cursor-pointer' : 'cursor-not-allowed text-text-disabled')}>
-                      <input type="checkbox" role="switch" aria-label={`${m.name} activo`} checked={m.active} disabled={self || !canManage} onChange={(e) => void change(m.userId, { active: e.target.checked })} className="size-[18px] accent-interactive" />
-                      <span className="t-caption">Acceso</span>
-                    </label>
-                    {canManage && !self ? <span className="flex items-center justify-end gap-1">
-                      <Button kind="tertiary" size="sm" loading={working === m.userId} onClick={() => void viewPassword(m)}>Ver contraseña</Button>
-                      <Button kind="tertiary" size="sm" onClick={() => setEditing(m)}>Editar</Button>
-                      <IconButton icon="trash" label={`Quitar a ${m.name} del equipo`} onClick={() => setRemoving(m)} />
-                    </span> : <span />}
                   </li>
                 );
               })}
