@@ -21,9 +21,9 @@ export function InvitationPage() {
   const [showDatos, setShowDatos] = useState(false);  // momento final: muestra la contraseña recién aceptada
   useEffect(() => { document.title = 'Invitación · Qhub'; rememberInvitation(token); }, [token]);
 
-  const preview = useQuery({ queryKey: ['invitation-preview', token], enabled: token !== '', retry: false, queryFn: async () => unwrap(await staff.previewInvitation(token)) });
+  const preview = useQuery({ queryKey: ['invitation-preview', token], enabled: token !== '', retry: false, staleTime: Infinity, refetchOnWindowFocus: false, queryFn: async () => unwrap(await staff.previewInvitation(token)) });
 
-  const clave = useQuery({ queryKey: ['invitation-password', token], enabled: !!preview.data, retry: false, queryFn: async () => unwrap(await staff.initialPassword(token)) });
+  const clave = useQuery({ queryKey: ['invitation-password', token], enabled: !!preview.data, retry: false, staleTime: Infinity, refetchOnWindowFocus: false, queryFn: async () => unwrap(await staff.initialPassword(token)) });
   const password = clave.data ?? null;
 
   async function accept() {

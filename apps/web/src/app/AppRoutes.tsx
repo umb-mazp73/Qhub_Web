@@ -33,7 +33,9 @@ function Gate() {
   if (pathname === '/invitacion') rememberInvitation(new URLSearchParams(search).get('token'));    // sobrevive al inicio de sesión
   const signedIn = auth.status === 'ready' && auth.value !== null;
   // Mientras se conecta sola con la conexión guardada (fuera de la pantalla de conectar) se muestra la carga, no se pide nada.
-  const autoConnecting = connection.status === 'connecting' && !!connection.auto && pathname !== '/connect';
+  // En /invitacion no: al aceptar, la conexión automática arranca mientras la página sigue terminando (mostrar la contraseña, ir a /inicio);
+  // si la carga la desmontara, la página volvería sola con la invitación ya usada y mostraría «No pudimos abrir esta invitación».
+  const autoConnecting = connection.status === 'connecting' && !!connection.auto && pathname !== '/connect' && pathname !== '/invitacion';
   const loading = auth.status === 'loading' || (signedIn && (mfa === 'checking' || (mfa === 'ok' && (memberships.status === 'loading' || autoConnecting))));
   const target = resolveRedirect({
     location: pathname + search,              // incluye el query (p. ej. /connect?tab=crear); resolveRedirect normaliza el pathname
