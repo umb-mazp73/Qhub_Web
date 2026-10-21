@@ -122,20 +122,14 @@ describe('invitación: llegar desde el botón del correo', () => {
     await waitFor(() => expect(staff.calls).toContain(`accept:${TOKEN}`));
   });
 
-  it('al aceptar con contraseña asignada muestra los datos como un momento y recién al cerrar entra', async () => {
+  it('al aceptar con contraseña asignada entra directo, sin repetir la contraseña', async () => {
     const staff = new FakeStaffRepository({ user: ana, memberships: [] }); staff.previews[TOKEN] = preview; staff.initialPasswords[TOKEN] = 'Taza-azul-77';
     const { user } = await renderWith(<AppRoutes />, makeContainer({ staff, tokenStore: savedToken() }), `/invitacion?token=${TOKEN}`);
     await screen.findByText('Esta es tu contraseña');
     await user.click(screen.getByRole('checkbox', { name: 'Ya la copié y la guardé' }));
     await user.click(screen.getByRole('button', { name: 'Aceptar invitación' }));
     await waitFor(() => expect(staff.calls).toContain(`accept:${TOKEN}`));
-    const dialog = await screen.findByRole('dialog');
-    expect(await screen.findByText('¡Bienvenido/a! Estos son tus datos')).toBeInTheDocument();
-    expect(within(dialog).getByText('ana@x.co')).toBeInTheDocument();
-    expect(within(dialog).getByText('Taza-azul-77')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: 'Copiar datos' })).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: 'Principal' })).toBeNull();     // todavía no entra
-    await user.click(within(dialog).getByRole('button', { name: 'Listo' }));
+    expect(screen.queryByRole('dialog')).toBeNull();      // la contraseña ya se mostró antes de aceptar: no se repite
     expect(await screen.findByRole('navigation', { name: 'Principal' })).toBeInTheDocument();
     await waitFor(() => expect(pendingInvitation()).toBeNull());
   });

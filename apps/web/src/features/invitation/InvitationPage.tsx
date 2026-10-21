@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { unwrap, friendlyError } from '@qhub/core';
-import { Button, Checkbox, Dialog, Icon, Logo, Notice, Panel, Skeleton, useToast } from '@/shared/ui';
+import { Button, Checkbox, Icon, Logo, Notice, Panel, Skeleton, useToast } from '@/shared/ui';
 import { useContainer, useSession } from '@/app/container';
 import { ORG_ROLE_HINT, ORG_ROLE_LABEL, spaceName } from '@/features/staff';
 import { clearInvitation, pendingInvitation, rememberInvitation } from './pending-invitation';
@@ -18,7 +18,6 @@ export function InvitationPage() {
   const [saved, setSaved] = useState(false);          // «ya copié y guardé mi contraseña»
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [showDatos, setShowDatos] = useState(false);  // momento final: muestra la contraseña recién aceptada
   useEffect(() => { document.title = 'Invitación · Qhub'; rememberInvitation(token); }, [token]);
 
   const preview = useQuery({ queryKey: ['invitation-preview', token], enabled: token !== '', retry: false, staleTime: Infinity, refetchOnWindowFocus: false, queryFn: async () => unwrap(await staff.previewInvitation(token)) });
@@ -34,11 +33,9 @@ export function InvitationPage() {
     if (!r.ok) { setBusy(false); setError(r.failure.message); return; }
     await session.loadMemberships();
     setBusy(false);
-    if (password) { setShowDatos(true); return; }     // con contraseña: la mostramos una última vez antes de entrar
     nav('/inicio', { replace: true });
     clearInvitation();         // después de salir de /invitacion: mientras se está aquí, la ruta vuelve a recordar el código
   }
-  const finishInvite = () => { setShowDatos(false); nav('/inicio', { replace: true }); clearInvitation(); };
   const decline = () => { nav('/inicio', { replace: true }); clearInvitation(); };
   async function switchAccount() { await session.signOut(); nav('/login', { replace: true }); clearInvitation(); }
 
@@ -84,18 +81,6 @@ export function InvitationPage() {
                 <Button size="lg" block icon="check" loading={busy} onClick={() => void accept()}>Aceptar invitación</Button>
                 <p className="t-caption m-0 flex items-center gap-2 text-text-secondary"><Icon name="info" />Para cambiar tu contraseña o tus datos después, lo pides desde Mi perfil y tu administrador lo aprueba.</p>
                 <Button kind="tertiary" onClick={decline}>Ahora no</Button>
-                {showDatos && password && (
-                  <Dialog title="¡Bienvenido/a! Estos son tus datos" onClose={finishInvite} actions={<Button onClick={finishInvite}>Listo</Button>}>
-                    <div className="flex flex-col gap-3">
-                      <Notice kind="warning" title="Guarda esta contraseña ahora." message="Es la única vez que se muestra: no la guardamos. Pégala en un lugar seguro, como un gestor de contraseñas." />
-                      <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border border-border-subtle bg-layer-02 p-4">
-                        <dt className="t-caption text-text-secondary">Correo</dt><dd className="m-0 truncate">{p.email}</dd>
-                        <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0 font-mono">{password}</dd>
-                      </dl>
-                      <div><Button kind="secondary" icon="copy" onClick={async () => { await navigator.clipboard?.writeText(`Correo: ${p.email}\nContraseña: ${password}`); toast.show('Datos copiados.'); }}>Copiar datos</Button></div>
-                    </div>
-                  </Dialog>
-                )}
               </>
             )}
           </div>
