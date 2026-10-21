@@ -23,7 +23,7 @@ interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'chi
 export function Button({ kind = 'primary', size = 'md', icon, block, loading, children, className, disabled, ...rest }: ButtonProps) {
   return (
     <button type="button" {...rest} disabled={disabled || loading} aria-busy={loading || undefined}
-      className={cx('inline-flex cursor-pointer items-center justify-between gap-2 whitespace-nowrap rounded-sm border-0 px-4 focus-visible:shadow-[inset_0_0_0_1px_var(--focus-inset)]',
+      className={cx('inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-sm border-0 px-4 focus-visible:shadow-[inset_0_0_0_1px_var(--focus-inset)]',
         'disabled:cursor-not-allowed disabled:bg-layer-selected disabled:text-text-disabled disabled:shadow-none aria-busy:cursor-progress',
         KIND[kind], SIZE[size], block && 'w-full', className)}>
       <span>{children}</span>
