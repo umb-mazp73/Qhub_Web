@@ -12,9 +12,6 @@ const pad2 = (n: number) => String(n).padStart(2, '0');
 /** Hora en 24 h (`09:30`) en la zona del dispositivo. */
 export const formatHm = (d: Date): string => `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 
-/** Hora en 24 h leyendo los campos UTC (para fechas ya desplazadas a la zona de la cola). */
-export const formatHmUtc = (d: Date): string => `${pad2(d.getUTCHours())}:${pad2(d.getUTCMinutes())}`;
-
 /** Recorta `08:00:00` a `08:00`. */
 export const trimSeconds = (t: string): string => (t.length >= 5 ? t.slice(0, 5) : t);
 

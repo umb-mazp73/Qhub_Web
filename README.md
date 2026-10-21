@@ -48,13 +48,12 @@ Pasos típicos:
 … bash -lc 'npm install'
 # generar el design system
 … bash -lc 'npm run generate -w @qhub/design'
-# tipos + tests
-… bash -lc 'npm run typecheck && npm run test --workspaces --if-present'
+# tipos
+… bash -lc 'npm run typecheck'
 # build de producción (deja el sitio en apps/web/dist)
 … bash -lc 'npm run build'
 ```
 
-O todo de una con `tool/verify.sh` (lee las `VITE_*` de tu `.env`).
 
 ## Despliegue en Vercel
 

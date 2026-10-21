@@ -29,7 +29,6 @@ export function perQueue(tickets: readonly Ticket[], names: Record<string, strin
 // ───────── Dashboard: periodos, comparación y series para las gráficas ─────────
 
 export const PERIODS = [{ days: 1, label: 'Hoy' }, { days: 7, label: '7 días' }, { days: 30, label: '30 días' }] as const;
-export type PeriodDays = (typeof PERIODS)[number]['days'];
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 

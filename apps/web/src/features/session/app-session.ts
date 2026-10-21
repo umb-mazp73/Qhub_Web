@@ -1,4 +1,4 @@
-import { isFailure, unauthorizedFailure, type Failure } from '@qhub/core';
+import { unauthorizedFailure, type Failure } from '@qhub/core';
 import type { ApiContext, AuthRepository, RegisterInput } from '@qhub/api-client';
 import { qhubRegistration } from '@/features/qhub/account';
 import type { ConnectToQhub, ConnectionState } from '@/features/qhub/connection';
@@ -245,5 +245,3 @@ export class AppSession {
     } finally { this.recovering = false; }
   }
 }
-
-export const failureOf = (e: unknown): Failure | null => (isFailure(e) ? e : null);

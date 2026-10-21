@@ -1,8 +1,3 @@
-import type { AppNotification } from '@qhub/api-client';
-
-/** Aviso personal de la API Qhub (lo que entrega `WS /ws/notificaciones`). Modelo de presentación. */
-export type QhubNotification = AppNotification;
-
 /** Etiqueta en español por `tipo_aviso` para el título del toast. */
 export function mapKindToText(kind: string | null): string {
   switch (kind) {

@@ -25,7 +25,6 @@ export const COUNTRIES: readonly Country[] = [
   { code: 'US', name: 'Estados Unidos', dial: '+1', timeZones: ["America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles"], cities: ['Nueva York', 'Miami', 'Los Ángeles', 'Chicago', 'Houston', 'Dallas', 'Washington D. C.', 'Orlando', 'San Francisco', 'Atlanta', 'Boston', 'Seattle'] },
 ];
 
-export const countryByCode = (code: string | null | undefined): Country | undefined => COUNTRIES.find((c) => c.code === code);
 /** Acepta código ISO o nombre (datos antiguos guardaban el nombre escrito a mano). */
 export const countryByAny = (v: string | null | undefined): Country | undefined => {
   if (!v) return undefined;

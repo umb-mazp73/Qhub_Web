@@ -5,7 +5,6 @@ export interface MemberRequest { id: string; userId: string; name: string; type:
 /** Estado del permiso propio. `vencida`: pasaron 24 h desde que se aprobó. */
 export type PermissionStatus = 'pendiente' | 'aprobada' | 'rechazada' | 'usada' | 'vencida';
 export interface MyPermission { status: PermissionStatus; expiresAt: Date | null }
-export const canAskAgain = (p: MyPermission | null) => !p || p.status === 'rechazada' || p.status === 'usada' || p.status === 'vencida';
 
 /** Registro de una solicitud ya resuelta (historial del administrador). `atendida`: solicitud de datos que el administrador resolvió editando el perfil. */
 export type RequestOutcome = 'aprobada' | 'usada' | 'rechazada' | 'vencida' | 'atendida';

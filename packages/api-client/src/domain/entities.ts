@@ -53,8 +53,6 @@ export const capacityPerSlot = (s: Pick<ScheduleInput, 'slotMinutes' | 'turnMinu
 export interface CreateQueueInput { readonly name: string; readonly description?: string; readonly schedule?: ScheduleInput }
 
 export interface Slot { readonly start: Date; readonly end: Date; readonly capacity: number; readonly taken: number; readonly available: number }
-export const slotIsFull = (s: Slot) => s.available <= 0;
-export const slotIsLow = (s: Slot) => s.available > 0 && s.available <= 2;
 
 export interface QueueState { readonly queueId: string; readonly waiting: number; readonly serving: number }
 export interface QueueLimit { readonly accountType: AccountType; readonly limit: number; readonly active: number; readonly available: number }

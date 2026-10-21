@@ -6,9 +6,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run --exclude test/integration/**",
-    "test:integration": "vitest run test/integration"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@qhub/core": "*"

@@ -1,7 +1,5 @@
-import { colors, type ColorTokens, type ThemeName } from './tokens.generated';
+import type { ColorTokens } from './tokens.generated';
 import type { TicketStatus } from '@qhub/api-client';
-
-export const getColors = (theme: ThemeName): ColorTokens => colors[theme];
 
 type StatusColors = { fill: string; text: string };
 /** Relleno del badge (texto encima: `textOnAccent`) y color como texto/ícono sobre superficie. */
