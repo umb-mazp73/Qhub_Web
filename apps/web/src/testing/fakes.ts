@@ -1,4 +1,4 @@
-import { ok, err, conflictFailure, notFoundFailure, type Failure, type Result } from '@qhub/core';
+import { DEFAULT_QUEUE_RULES, ok, err, conflictFailure, notFoundFailure, type Failure, type QueueRules, type Result } from '@qhub/core';
 import {
   ApiContext, type AppNotification, type AuthRepository, type AuthToken, type CreateQueueInput, type HealthRepository, type NotificationRepository, type Queue, type QueueEvent,
   type QueueLimit, type QueueRepository, type QueueState, type QueueSubscription, type RealtimeRepository, type RegisterInput, type Registration, type Schedule, type ScheduleInput,
@@ -135,6 +135,9 @@ export class FakeStaffRepository implements StaffRepository {
   async invitations() { return ok([...this.invitationsList]); }
   async queuePrefixes() { return ok({ ...this.prefixes }); }
   async setQueuePrefix(_o: string, q: string, p: string): Promise<Result<void>> { this.prefixes[q] = p.toUpperCase(); return ok(undefined); }
+  queueRulesByQueue: Record<string, QueueRules> = {};
+  async queueRules(_o: string, q: string) { return ok(this.queueRulesByQueue[q] ?? { ...DEFAULT_QUEUE_RULES, breaks: [] }); }
+  async setQueueRules(_o: string, q: string, r: QueueRules): Promise<Result<void>> { this.queueRulesByQueue[q] = r; return ok(undefined); }
   async audit(_o: string, action: string): Promise<Result<void>> { this.audits.push(action); return ok(undefined); }
 }
 

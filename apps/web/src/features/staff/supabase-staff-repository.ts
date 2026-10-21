@@ -1,5 +1,5 @@
 import type { SupabaseClient, User } from '@supabase/supabase-js';
-import { badRequestFailure, conflictFailure, err, type Failure, failureFromSupabase, forbiddenFailure, isFailure, networkFailure, notFoundFailure, ok, rateLimitedFailure, type Result, serverFailure, unauthorizedFailure, unknownFailure, validationFailure } from '@qhub/core';
+import { DEFAULT_QUEUE_RULES, type QueueRules, badRequestFailure, conflictFailure, err, type Failure, failureFromSupabase, forbiddenFailure, isFailure, networkFailure, notFoundFailure, ok, rateLimitedFailure, type Result, serverFailure, unauthorizedFailure, unknownFailure, validationFailure } from '@qhub/core';
 import { invokeFunction } from '@/shared/invoke-function';
 import { effectiveRole, parseOrgRole, type AccountKind, type Invitation, type InvitationPreview, type MemberProfile, type MemberRequest, type RequestRecord, type RequestOutcome, type MyPermission, type PermissionStatus, type RequestType, type InviteProfile, type InviteResult, type Member, type Membership, type OrgRole, type Organization, type Profile, type StaffRepository, type StaffUser } from '.';
 
@@ -259,6 +259,26 @@ export class SupabaseStaffRepository implements StaffRepository {
   }
   setQueuePrefix(orgId: string, queueId: string, prefix: string) {
     return this.run(async () => { await this.q(this.sb.from('cola_prefijos').upsert({ organizacion_id: orgId, qhub_cola_id: queueId, prefijo: prefix.toUpperCase() }) as unknown as PromiseLike<{ data: unknown; error: unknown }>); });
+  }
+  queueRules(orgId: string, queueId: string) {
+    return this.run(async (): Promise<QueueRules> => {
+      const rows = await this.q<Row[]>(this.sb.from('cola_reglas').select('descansos, margen_ahora_min, anticipacion_cita_min, max_citas_activas').eq('organizacion_id', orgId).eq('qhub_cola_id', queueId).limit(1) as unknown as PromiseLike<{ data: Row[]; error: unknown }>);
+      const r = rows[0];
+      if (!r) return { ...DEFAULT_QUEUE_RULES, breaks: [] };
+      const list = Array.isArray(r.descansos) ? (r.descansos as { desde?: string; hasta?: string }[]) : [];
+      return {
+        breaks: list.map((b) => ({ from: String(b.desde ?? '').slice(0, 5), to: String(b.hasta ?? '').slice(0, 5) })),
+        nowMarginMinutes: Number(r.margen_ahora_min), appointmentLeadMinutes: Number(r.anticipacion_cita_min), maxActiveAppointments: Number(r.max_citas_activas),
+      };
+    });
+  }
+  setQueueRules(orgId: string, queueId: string, rules: QueueRules) {
+    return this.run(async () => {
+      await this.q(this.sb.from('cola_reglas').upsert({
+        organizacion_id: orgId, qhub_cola_id: queueId, descansos: rules.breaks.map((b) => ({ desde: b.from, hasta: b.to })),
+        margen_ahora_min: rules.nowMarginMinutes, anticipacion_cita_min: rules.appointmentLeadMinutes, max_citas_activas: rules.maxActiveAppointments,
+      }) as unknown as PromiseLike<{ data: unknown; error: unknown }>);
+    });
   }
   audit(orgId: string, action: string, extra: { entity?: string; entityId?: string; detail?: Record<string, unknown> } = {}) {
     return this.run(async () => {

@@ -136,3 +136,42 @@ describe('editar cola', () => {
 });
 
 function within_dialog(name: string) { return screen.getAllByRole('button', { name }).at(-1)!; }
+
+describe('descansos y reglas de turnos', () => {
+  it('agrega un descanso, lo guarda con la cola y valida que esté dentro del horario', async () => {
+    const { user, c } = await setup('/colas/nueva');
+    await waitReady();
+    await user.type(screen.getByLabelText('Nombre de la cola'), 'Caja');
+    expect(screen.getByText('Esta cola atiende sin descansos.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Agregar descanso' }));
+    expect(screen.getByLabelText('Descanso 1: desde')).toHaveValue('13:00');
+    expect(screen.getByLabelText('Descanso 1: hasta')).toHaveValue('14:00');
+    await user.click(screen.getByRole('button', { name: /Guardar cola/ }));
+    await screen.findByText('LISTA DE COLAS');
+    const staff = c.staff as FakeStaffRepository;
+    expect(Object.values(staff.queueRulesByQueue)[0]).toEqual({ breaks: [{ from: '13:00', to: '14:00' }], nowMarginMinutes: 3, appointmentLeadMinutes: 5, maxActiveAppointments: 3 });
+  });
+
+  it('un descanso fuera del horario no deja guardar', async () => {
+    const { user, c } = await setup('/colas/nueva');
+    await waitReady();
+    await user.type(screen.getByLabelText('Nombre de la cola'), 'Caja');
+    await user.click(screen.getByRole('button', { name: 'Agregar descanso' }));
+    await user.click(screen.getByRole('combobox', { name: 'Cierre' }));   // hora en 24 h, se elige de la lista
+    await user.click(await screen.findByRole('option', { name: '12:00' }));
+    await user.click(screen.getByRole('button', { name: /Guardar cola/ }));
+    expect(await screen.findByText(/dentro del horario de atención/)).toBeInTheDocument();
+    expect(Object.keys((c.staff as FakeStaffRepository).queueRulesByQueue)).toHaveLength(0);
+  });
+
+  it('al editar carga los descansos guardados y se pueden quitar', async () => {
+    const staff = new FakeStaffRepository({ user: ana, memberships: [adminMembership] });
+    staff.queueRulesByQueue.q1 = { breaks: [{ from: '12:30', to: '13:30' }], nowMarginMinutes: 5, appointmentLeadMinutes: 10, maxActiveAppointments: 2 };
+    const c = makeContainer({ staff });
+    const { user } = await renderWith(<Routes><Route path="/colas/:id" element={<QueueEditPage />} /><Route path="/colas" element={<p>LISTA DE COLAS</p>} /></Routes>, c, '/colas/q1');
+    await screen.findByDisplayValue('Caja 1');
+    await waitFor(() => expect(screen.getByLabelText('Descanso 1: desde')).toHaveValue('12:30'));
+    await user.click(screen.getByRole('button', { name: 'Quitar descanso 1' }));
+    expect(screen.getByText('Esta cola atiende sin descansos.')).toBeInTheDocument();
+  });
+});

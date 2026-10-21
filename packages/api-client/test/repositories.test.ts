@@ -66,6 +66,14 @@ describe('FetchTransport', () => {
     expect(init1.headers).toMatchObject({ Authorization: 'Bearer tok', 'X-Usuario-Id': 'admin-1', 'X-Usuario-Rol': 'admin' });
     expect((init2.headers as Record<string, string>).Authorization).toBeUndefined();
   });
+  it('un administrador que opera la fila actúa como agente solo en atender, finalizar y no-show', async () => {
+    const ctx = new ApiContext(); ctx.token = 'tok'; ctx.actor = { userId: 'admin-1', role: 'admin' };
+    const f = vi.fn(async () => resp(200, ticketJson()));
+    const repo = new TicketRepositoryImpl(new FetchTransport({ baseUrl: 'http://api.test', context: ctx, fetchImpl: f as unknown as typeof fetch }));
+    await repo.call('t1'); await repo.finish('t1'); await repo.noShow('t1'); await repo.cancel('t1');
+    const roles = f.mock.calls.map((c) => ((c as unknown as [string, RequestInit])[1].headers as Record<string, string>)['X-Usuario-Rol']);
+    expect(roles).toEqual(['agente', 'agente', 'agente', 'admin']);   // cancelar conserva el rol de la sesión
+  });
   it('un 401 en un endpoint de negocio avisa a la app; en el login no', async () => {
     const ctx = new ApiContext(); let calls = 0; ctx.onUnauthorized = () => { calls++; };
     const t = new FetchTransport({ baseUrl: 'http://api.test', context: ctx, fetchImpl: (async () => resp(401, { detail: 'x' })) as unknown as typeof fetch });

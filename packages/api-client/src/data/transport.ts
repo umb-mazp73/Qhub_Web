@@ -2,10 +2,14 @@ import {
   badRequestFailure, conflictFailure, forbiddenFailure, networkFailure, notFoundFailure, rateLimitedFailure, serverFailure,
   unauthorizedFailure, unknownFailure, validationFailure, Failure, isFailure,
 } from '@qhub/core';
-import type { Actor } from '../domain/entities';
+import type { Actor, ActorRole } from '../domain/entities';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-export interface HttpRequest { method: HttpMethod; path: string; query?: Record<string, string | number | boolean | undefined>; body?: unknown }
+export interface HttpRequest {
+  method: HttpMethod; path: string; query?: Record<string, string | number | boolean | undefined>; body?: unknown;
+  /** Rol con el que se hace ESTA llamada, si difiere del de la sesión (p. ej. un administrador que atiende turnos actúa como agente). */
+  actorRole?: ActorRole;
+}
 export interface HttpResponse { status: number; body: unknown }
 
 /** Puerto de transporte. Solo lanza `Failure('network')` ante problemas de conectividad; los HTTP 4xx/5xx vuelven como respuesta. */
@@ -47,7 +51,7 @@ export class FetchTransport implements HttpTransport {
     if (req.body !== undefined) headers['Content-Type'] = 'application/json';
     if (!isPublicPath(req.path)) {
       if (this.ctx.token) headers.Authorization = `Bearer ${this.ctx.token}`;
-      if (this.ctx.actor) { headers['X-Usuario-Id'] = this.ctx.actor.userId; headers['X-Usuario-Rol'] = this.ctx.actor.role; }
+      if (this.ctx.actor) { headers['X-Usuario-Id'] = this.ctx.actor.userId; headers['X-Usuario-Rol'] = req.actorRole ?? this.ctx.actor.role; }
     }
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), this.timeoutMs);

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  applyQueueEvent, capacityPerSlot, createQueue, inQueueTime, isValidHm, nextToCall, normalizeHm, peopleAhead, queueUtcOffsetMinutes,
+  applyQueueEvent, capacityPerSlot, createQueue, inQueueTime, isFutureAppointment, isValidHm, nextAppointment, nextToCall, normalizeHm, peopleAhead, queueUtcOffsetMinutes,
   releasesSlot, replaceSchedule, sortWaitingRoom, summarizeSchedule, validateSchedule, type QueueRepository, type ScheduleInput, type Slot, type Ticket, type TicketStatus,
 } from '../src';
 import { ok } from '@qhub/core';
@@ -68,6 +68,25 @@ describe('fila de atención', () => {
   const later = t('e', 'en_espera', { position: 1, slotStart: new Date('2026-10-20T16:00:00Z') });
   it('atendiendo primero, luego franja y posición; excluye cerrados', () => expect(sortWaitingRoom([a, later, d, b, c]).map((x) => x.id)).toEqual(['c', 'b', 'a', 'e']));
   it('siguiente a llamar', () => { expect(nextToCall([a, b, c, later])?.id).toBe('b'); expect(nextToCall([c, d])).toBeNull(); });
+  describe('prioridad de la fila: citas que ya llegaron → turnos ahora → citas futuras', () => {
+    const now = new Date('2026-10-20T15:20:00Z');
+    const ahoraViejo = t('ahora1', 'en_espera', { createdAt: new Date('2026-10-20T15:05:00Z'), slotStart: new Date('2026-10-20T15:00:00Z'), position: 1 });
+    const ahoraNuevo = t('ahora2', 'en_espera', { createdAt: new Date('2026-10-20T15:15:00Z'), slotStart: new Date('2026-10-20T15:00:00Z'), position: 2 });
+    const citaYaLlego = t('cita-ya', 'en_espera', { scheduled: true, slotStart: new Date('2026-10-20T15:10:00Z'), position: 3 });
+    const citaFutura = t('cita-futura', 'en_espera', { scheduled: true, slotStart: new Date('2026-10-20T15:30:00Z'), position: 1 });
+    it('una cita cuya hora ya llegó pasa antes que los turnos ahora', () => {
+      expect(sortWaitingRoom([ahoraViejo, ahoraNuevo, citaFutura, citaYaLlego], now).map((x) => x.id)).toEqual(['cita-ya', 'ahora1', 'ahora2', 'cita-futura']);
+      expect(nextToCall([ahoraViejo, citaYaLlego], now)?.id).toBe('cita-ya');
+    });
+    it('los turnos ahora salen por orden de llegada', () => expect(nextToCall([ahoraNuevo, ahoraViejo], now)?.id).toBe('ahora1'));
+    it('una cita que aún no llega no se llama sola, y se informa cuál es la próxima', () => {
+      expect(nextToCall([citaFutura], now)).toBeNull();
+      expect(nextAppointment([citaFutura, ahoraViejo], now)?.id).toBe('cita-futura');
+      expect(isFutureAppointment(citaFutura, now)).toBe(true);
+      expect(nextToCall([citaFutura, ahoraNuevo], now)?.id).toBe('ahora2');
+    });
+    it('cuando llega la hora de la cita pasa a ser llamable', () => expect(nextToCall([citaFutura], new Date('2026-10-20T15:30:00Z'))?.id).toBe('cita-futura'));
+  });
   it('reducer de eventos inserta y reemplaza', () => {
     const upd = applyQueueEvent([a, b], { type: 'turno_llamado', queueId: 'q', ticket: t('a', 'atendiendo') });
     expect(upd).toHaveLength(2);

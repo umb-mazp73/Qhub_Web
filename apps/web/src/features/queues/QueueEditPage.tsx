@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { ALL_TIME_ZONES as TIME_ZONES, defaultQueuePrefix, type Failure, isValidQueuePrefix, type Result, suggestQueuePrefixes, trimSeconds } from '@qhub/core';
+import { ALL_TIME_ZONES as TIME_ZONES, DEFAULT_QUEUE_RULES, defaultQueuePrefix, type Failure, isValidQueuePrefix, MAX_BREAKS, type QueueBreak, type Result, suggestQueuePrefixes, trimSeconds, validateBreaks } from '@qhub/core';
 import { createQueue, isValidHm, normalizeHm, replaceSchedule, summarizeSchedule, validateSchedule, type ScheduleInput } from '@qhub/api-client';
 import { Button, ConfirmDialog, cx, Notice, PageHead, Panel, Select, Skeleton, TextField, TimeField, useToast } from '@/shared/ui';
 import { useContainer, useSession } from '@/app/container';
@@ -13,6 +13,9 @@ const TURN_MINUTES = [5, 10, 15, 20, 25, 30, 45, 60, 90, 120];
 const STATIONS = Array.from({ length: 20 }, (_, i) => i + 1);
 const AHEAD_DAYS = [1, 2, 3, 5, 7, 14, 21, 30, 60, 90];
 const DAILY_CAP = [0, 20, 50, 100, 150, 200, 300, 500, 1000];
+const NOW_MARGIN = [0, 1, 2, 3, 5, 10, 15];
+const LEAD = [0, 5, 10, 15, 30, 60, 120];
+const MAX_APPOINTMENTS = [1, 2, 3, 5, 10];
 /** Opciones numéricas; si el valor actual (de la API) no está en la lista, se agrega para no perderlo. */
 const numOptions = (list: readonly number[], current: number, label: (n: number) => string) =>
   [...new Set([...list, current])].sort((a, b) => a - b).map((n) => ({ value: n, label: label(n) }));
@@ -44,6 +47,10 @@ export function QueueEditPage() {
   const [slot, setSlot] = useState(30);
   const [days, setDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [zone, setZone] = useState(session.membership!.organization.timeZone);
+  const [breaks, setBreaks] = useState<QueueBreak[]>([]);
+  const [nowMargin, setNowMargin] = useState(DEFAULT_QUEUE_RULES.nowMarginMinutes);
+  const [lead, setLead] = useState(DEFAULT_QUEUE_RULES.appointmentLeadMinutes);
+  const [maxAppts, setMaxAppts] = useState(DEFAULT_QUEUE_RULES.maxActiveAppointments);
   const [active, setActive] = useState(true);
   const [loadedName, setLoadedName] = useState<string | null>(null);
   const [loading, setLoading] = useState(editing);
@@ -64,7 +71,7 @@ export function QueueEditPage() {
     if (!id) return;
     let live = true;
     void (async () => {
-      const [q, s, p] = await Promise.all([queues.get(id), queues.schedule(id), staff.queuePrefixes(orgId)]);
+      const [q, s, p, rules] = await Promise.all([queues.get(id), queues.schedule(id), staff.queuePrefixes(orgId), staff.queueRules(orgId, id)]);
       if (!live) return;
       if (q.ok) { setName(q.value.name); setDesc(q.value.description ?? ''); setActive(q.value.active); setLoadedName(q.value.name); setPrefix((p.ok ? p.value[id] : undefined) ?? defaultQueuePrefix(q.value.name)); } else setError(q.failure);
       if (s.ok) {
@@ -73,6 +80,7 @@ export function QueueEditPage() {
         setTurn(String(v.turnMinutes)); setStations(String(v.stations)); setDaily(String(v.dailyCapacity)); setAhead(String(v.maxDaysAhead));
         setZone(v.timeZone);
       } else setError((e) => e ?? s.failure);
+      if (rules.ok) { setBreaks(rules.value.breaks.map((b) => ({ ...b }))); setNowMargin(rules.value.nowMarginMinutes); setLead(rules.value.appointmentLeadMinutes); setMaxAppts(rules.value.maxActiveAppointments); }
       setLoading(false); setDirty(false);
     })();
     return () => { live = false; };
@@ -92,6 +100,7 @@ export function QueueEditPage() {
     if (!isValidHm(opens)) e.opens = 'Elige la hora de apertura.';
     if (!isValidHm(closes)) e.closes = 'Elige la hora de cierre.';
     if (input) { const m = validateSchedule(input); if (m) e.schedule = m; }
+    { const m = validateBreaks(breaks, opens, closes); if (m) e.breaks = m; }
     setErrs(e);
     if (Object.keys(e).length || !input) return;
 
@@ -107,6 +116,8 @@ export function QueueEditPage() {
     }
     if (!res.ok) { setSaving(false); setError(res.failure); return; }
     await staff.setQueuePrefix(orgId, res.value, prefixValue);
+    const saved = await staff.setQueueRules(orgId, res.value, { breaks, nowMarginMinutes: nowMargin, appointmentLeadMinutes: lead, maxActiveAppointments: maxAppts });
+    if (!saved.ok) { setSaving(false); setError(saved.failure); return; }
     await staff.audit(orgId, id ? 'cola.editar' : 'cola.crear', { entity: 'cola', entityId: res.value, detail: { nombre: name.trim() } });
     await Promise.all(['queues', 'queue-limit', 'prefixes'].map((k) => qc.invalidateQueries({ queryKey: [k] })));
     toast.show(id ? 'Cola actualizada.' : 'Cola creada.');
@@ -142,6 +153,7 @@ export function QueueEditPage() {
       <div className="flex flex-col gap-4">
         {error && <Notice kind="error" title={error.message} />}
         {errs.schedule && <Notice kind="warning" title={errs.schedule} />}
+        {errs.breaks && <Notice kind="warning" title={errs.breaks} />}
         {editing && !active && <Notice kind="info" title="Esta cola está archivada." message="Reactívala para volver a editarla y recibir turnos." />}
         {loading ? <Skeleton height={320} /> : (
           <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -175,6 +187,30 @@ export function QueueEditPage() {
                     <TimeField label="Apertura" value={opens} onValueChange={touch(setOpens)} error={errs.opens} />
                     <TimeField label="Cierre" value={closes} onValueChange={touch(setCloses)} error={errs.closes} />
                     <div className="col-span-2"><Select label="Zona horaria" value={zone} options={TIME_ZONES.some((z) => z.value === zone) ? TIME_ZONES : [{ value: zone, label: zone }, ...TIME_ZONES]} onValueChange={touch(setZone)} /></div>
+                  </div>
+                </div>
+              </Panel>
+              <Panel title="Descansos">
+                <div className="flex flex-col gap-4">
+                  <p className="t-caption text-text-secondary">En un descanso no se sacan turnos «ahora» ni se pueden reservar citas. Se repite todos los días de atención.</p>
+                  {breaks.length === 0 && <p className="text-text-secondary">Esta cola atiende sin descansos.</p>}
+                  {breaks.map((b, i) => (
+                    <div key={i} className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[1fr_1fr_auto]">
+                      <TimeField label={`Descanso ${i + 1}: desde`} value={b.from} onValueChange={(v) => touch(setBreaks)(breaks.map((x, j) => (j === i ? { ...x, from: v } : x)))} />
+                      <TimeField label={`Descanso ${i + 1}: hasta`} value={b.to} onValueChange={(v) => touch(setBreaks)(breaks.map((x, j) => (j === i ? { ...x, to: v } : x)))} />
+                      <div className="sm:pt-6"><Button kind="ghost" icon="trash" onClick={() => touch(setBreaks)(breaks.filter((_, j) => j !== i))}>{`Quitar descanso ${i + 1}`}</Button></div>
+                    </div>
+                  ))}
+                  <div><Button kind="tertiary" icon="plus" disabled={breaks.length >= MAX_BREAKS} onClick={() => touch(setBreaks)([...breaks, { from: '13:00', to: '14:00' }])}>Agregar descanso</Button></div>
+                </div>
+              </Panel>
+              <Panel title="Turnos y citas">
+                <div className="flex flex-col gap-4">
+                  <p className="t-caption text-text-secondary">El turno «ahora» es por orden de llegada (una persona solo puede tener uno a la vez por cola). La cita es una hora reservada, y una persona puede tener varias.</p>
+                  <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-3">
+                    <Select label="Espera mínima del turno ahora" value={nowMargin} options={numOptions(NOW_MARGIN, nowMargin, (n) => (n === 0 ? 'Sin margen' : `${n} min`))} onValueChange={touch(setNowMargin)} />
+                    <Select label="Una cita debe reservarse con" value={lead} options={numOptions(LEAD, lead, (n) => (n === 0 ? 'Sin anticipación mínima' : `${n} min de anticipación`))} onValueChange={touch(setLead)} />
+                    <Select label="Citas activas por persona" value={maxAppts} options={numOptions(MAX_APPOINTMENTS, maxAppts, (n) => (n === 1 ? '1 cita' : `${n} citas`))} onValueChange={touch(setMaxAppts)} />
                   </div>
                 </div>
               </Panel>

@@ -11,3 +11,4 @@ export * from './queue-prefix';
 export * from './profile';
 export * from './dates';
 export * from './safe-message';
+export * from './queue-rules';

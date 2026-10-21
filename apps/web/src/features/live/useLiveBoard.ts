@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Failure, Result } from '@qhub/core';
-import { applyQueueEvent, nextToCall, sortWaitingRoom, type ConnectionStatus, type Ticket } from '@qhub/api-client';
+import { applyQueueEvent, nextAppointment, nextToCall, sortWaitingRoom, type ConnectionStatus, type Ticket } from '@qhub/api-client';
 import { useContainer } from '@/app/container';
 
 export interface LiveBoard {
   tickets: Ticket[]; loading: boolean; error: Failure | null; connection: ConnectionStatus; busyId: string | null;
-  serving: Ticket[]; waiting: Ticket[]; next: Ticket | null; isLive: boolean;
+  serving: Ticket[]; waiting: Ticket[]; next: Ticket | null; /** Próxima cita que aún no llega (si no hay a quién llamar ya). */ upcoming: Ticket | null; now: Date; isLive: boolean;
   reload(): Promise<void>;
   act(kind: 'call' | 'finish' | 'noShow', t: Ticket): Promise<Result<Ticket>>;
   callNext(): Promise<Result<Ticket> | null>;
+  /** Termina el turno en atención y llama al siguiente en un solo paso. */
+  finishAndCallNext(t: Ticket): Promise<{ finished: Result<Ticket>; called: Result<Ticket> | null }>;
 }
 
 /** Fila de una cola en vivo: carga el día, escucha el WebSocket y ejecuta las acciones del operador. */
@@ -19,7 +21,10 @@ export function useLiveBoard(queueId: string): LiveBoard {
   const [error, setError] = useState<Failure | null>(null);
   const [connection, setConnection] = useState<ConnectionStatus>('connecting');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [now, setNow] = useState(() => new Date());
   const alive = useRef(true);
+  const latest = useRef<Ticket[]>([]);
+  latest.current = tickets;
 
   const reload = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(null); }
@@ -47,7 +52,8 @@ export function useLiveBoard(queueId: string): LiveBoard {
       onStatus: setConnection,
     });
     const timer = setInterval(() => void reload(true), 60_000);
-    return () => { alive.current = false; off(); clearInterval(timer); };
+    const clock = setInterval(() => setNow(new Date()), 20_000);   // las citas «llegan» y los cronómetros avanzan con el reloj
+    return () => { alive.current = false; off(); clearInterval(timer); clearInterval(clock); };
   }, [realtime, queueId, reload]);
 
   const act = useCallback(async (kind: 'call' | 'finish' | 'noShow', t: Ticket) => {
@@ -58,12 +64,19 @@ export function useLiveBoard(queueId: string): LiveBoard {
     return r;
   }, [repo, queueId]);
 
-  const queue = sortWaitingRoom(tickets);
-  const next = nextToCall(tickets);
+  const queue = sortWaitingRoom(tickets, now);
+  const next = nextToCall(tickets, now);
+  const finishAndCallNext = async (t: Ticket) => {
+    const finished = await act('finish', t);
+    if (!finished.ok) return { finished, called: null };
+    const following = nextToCall(latest.current, new Date());
+    return { finished, called: following ? await act('call', following) : null };
+  };
   return {
     tickets, loading, error, connection, busyId,
-    serving: queue.filter((t) => t.status === 'atendiendo'), waiting: queue.filter((t) => t.status === 'en_espera'), next, isLive: connection === 'connected',
+    serving: queue.filter((t) => t.status === 'atendiendo'), waiting: queue.filter((t) => t.status === 'en_espera'), next, upcoming: next ? null : nextAppointment(tickets, now), now, isLive: connection === 'connected',
     reload: () => reload(), act,
     callNext: async () => (next ? act('call', next) : null),
+    finishAndCallNext,
   };
 }

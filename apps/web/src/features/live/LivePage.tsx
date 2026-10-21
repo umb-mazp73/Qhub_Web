@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { defaultQueuePrefix, formatHm, formatTurnNumber, type Result, friendlyError } from '@qhub/core';
+import { isFutureAppointment } from '@qhub/api-client';
 import type { Ticket } from '@qhub/api-client';
 import { Button, ConfirmDialog, EmptyState, Kpi, LiveIndicator, Notice, PageHead, Panel, Skeleton, Table, Td, TurnBadge, TurnNumber, useToast } from '@/shared/ui';
-import { useSession } from '@/app/container';
+import { useContainer, useSession } from '@/app/container';
 import { can } from '@/features/staff/permissions';
 import { useLiveBoard } from './useLiveBoard';
 import { usePrefixes, useQueues } from '@/features/queues/hooks';
@@ -28,8 +30,13 @@ export function LivePage() {
   );
 }
 
+/** Minutos enteros entre dos instantes (mínimo 0). */
+const minutesBetween = (from: Date, to: Date) => Math.max(0, Math.round((to.getTime() - from.getTime()) / 60_000));
+
 export function LiveBoard({ queueId, queueName }: { queueId: string; queueName: string }) {
   const board = useLiveBoard(queueId);
+  const { queues } = useContainer();
+  const turnMinutes = useQuery({ queryKey: ['schedule', queueId], queryFn: async () => { const r = await queues.schedule(queueId); return r.ok ? r.value.turnMinutes : null; } }).data ?? null;
   const toast = useToast();
   const { session } = useSession();
   const canOperate = can(session.membership?.role, 'live.operate');
@@ -52,16 +59,25 @@ export function LiveBoard({ queueId, queueName }: { queueId: string; queueName: 
             {board.serving.length === 0 ? <div className="t-turn-xl text-sidebar-text">—</div> : board.serving.map((t) => (
               <div key={t.id} className="mb-2 flex items-center gap-2">
                 <TurnNumber number={t.number} prefix={prefix} xl={board.serving.length === 1} className="text-white" />
-                {canOperate && <><Button kind="accent" icon="check" loading={board.busyId === t.id} disabled={board.busyId !== null} onClick={async () => report(await board.act('finish', t), `Turno ${label(t)} finalizado.`)}>Finalizar</Button>
-                <Button kind="danger" icon="noshow" disabled={board.busyId !== null} onClick={() => setConfirmNoShow(t)}>No-show</Button></>}
+                {t.calledAt && <ServingClock since={t.calledAt} now={board.now} expectedMinutes={turnMinutes} />}
+                {canOperate && <>
+                  <Button kind="accent" icon="check" loading={board.busyId === t.id} disabled={board.busyId !== null}
+                    onClick={async () => { const r = await board.finishAndCallNext(t); report(r.finished, `Turno ${label(t)} finalizado.`); if (r.called) report(r.called, `Llamaste a ${label(r.called.ok ? r.called.value : t)}.`); }}>
+                    {board.next ? `Finalizar y llamar a ${label(board.next)}` : 'Finalizar'}
+                  </Button>
+                  {board.next && <Button kind="secondary" disabled={board.busyId !== null} onClick={async () => report(await board.act('finish', t), `Turno ${label(t)} finalizado.`)}>Solo finalizar</Button>}
+                  <Button kind="danger" icon="noshow" disabled={board.busyId !== null} onClick={() => setConfirmNoShow(t)}>No se presentó</Button></>}
               </div>
             ))}
           </div>
           <div>
             {canOperate ? <Button size="lg" icon="call" disabled={!board.next || board.busyId !== null} loading={board.busyId !== null && board.busyId === board.next?.id}
               onClick={async () => report(await board.callNext(), `Llamaste a ${board.next ? label(board.next) : ''}.`)}>
-              {board.next ? `Llamar siguiente · ${label(board.next)}` : 'No hay turnos en espera'}
+              {board.next ? `Llamar siguiente · ${label(board.next)}` : board.upcoming ? 'Nadie para llamar ahora' : 'No hay turnos en espera'}
             </Button> : <p className="text-sidebar-text">Tu rol puede ver la fila, pero no atenderla.</p>}
+            {canOperate && !board.next && board.upcoming && (
+              <p className="t-caption mt-2 text-sidebar-text">{`La próxima cita es ${label(board.upcoming)} a las ${formatHm(board.upcoming.slotStart)} (en ${minutesBetween(board.now, board.upcoming.slotStart)} min).`}</p>
+            )}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-px bg-border-subtle">
@@ -78,8 +94,8 @@ export function LiveBoard({ queueId, queueName }: { queueId: string; queueName: 
               {board.waiting.map((t) => (
                 <tr key={t.id}>
                   <Td className="w-[110px]"><TurnNumber number={t.number} prefix={prefix} /></Td>
-                  <Td className="w-[90px] font-mono">{formatHm(t.slotStart)}</Td>
-                  <Td className="text-text-secondary">{t.scheduled ? 'Reservado' : 'Turno inmediato'}</Td>
+                  <Td className="w-[90px] font-mono">{formatHm(t.scheduled ? t.slotStart : t.createdAt)}</Td>
+                  <Td className="text-text-secondary">{t.scheduled ? <>Cita <span className={isFutureAppointment(t, board.now) ? '' : 'text-support-warning font-semibold'}>{isFutureAppointment(t, board.now) ? `· en ${minutesBetween(board.now, t.slotStart)} min` : '· ya es su hora'}</span></> : 'Turno ahora · por orden de llegada'}</Td>
                   <Td className="font-mono t-caption text-text-secondary">{t.userId}</Td>
                   <Td><TurnBadge status="en_espera" /></Td>
                   <Td num>{canOperate && <Button size="sm" kind="tertiary" disabled={board.busyId !== null} onClick={async () => report(await board.act('call', t), `Llamaste a ${label(t)}.`)}>Llamar</Button>}</Td>
@@ -90,10 +106,19 @@ export function LiveBoard({ queueId, queueName }: { queueId: string; queueName: 
         )}
       </Panel>
       {confirmNoShow && (
-        <ConfirmDialog title="Marcar no-show" message={`El turno ${label(confirmNoShow)} se marcará como no presentado. Esta acción no se puede deshacer.`} confirmLabel="Marcar no-show"
+        <ConfirmDialog title="Marcar como no presentado" message={`El turno ${label(confirmNoShow)} se marcará como no presentado. Esta acción no se puede deshacer.`} confirmLabel="Marcar no presentado"
           onCancel={() => setConfirmNoShow(null)}
           onConfirm={async () => { const t = confirmNoShow; setConfirmNoShow(null); report(await board.act('noShow', t), 'Marcado como no-show.'); }} />
       )}
     </div>
   );
+}
+
+/** Cuánto lleva atendiéndose el turno frente a lo esperado: en ámbar si ya se pasó. */
+function ServingClock({ since, now, expectedMinutes }: { since: Date; now: Date; expectedMinutes: number | null }) {
+  const elapsed = minutesBetween(since, now);
+  const over = expectedMinutes !== null && elapsed > expectedMinutes;
+  return <span className={over ? 't-caption font-semibold text-support-warning' : 't-caption text-sidebar-text'} role="timer" aria-label="Tiempo de atención">
+    {`Lleva ${elapsed} min${expectedMinutes !== null ? ` de ~${expectedMinutes}` : ''}${over ? ' · se pasó del tiempo' : ''}`}
+  </span>;
 }

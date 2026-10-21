@@ -48,17 +48,34 @@ const HM = /^([01]?\d|2[0-3]):[0-5]\d$/;
 export const isValidHm = (v: string) => HM.test(v.trim());
 export const normalizeHm = (v: string) => { const [h = '', m = ''] = v.trim().split(':'); return `${h.padStart(2, '0')}:${m}`; };
 
-/** Orden de la fila de atención: atendiendo primero, luego por franja y posición. */
-export function sortWaitingRoom(tickets: readonly Ticket[]): Ticket[] {
+/** Cita (reservada) cuya hora todavía no llega: no se llama sola. */
+export const isFutureAppointment = (t: Ticket, now: Date = new Date()): boolean => t.scheduled && t.slotStart.getTime() > now.getTime();
+
+/** Grupo de prioridad en la fila: 0 = cita cuya hora ya llegó · 1 = turno «ahora» (por orden de llegada) · 2 = cita que aún no llega. */
+const waitingGroup = (t: Ticket, now: Date) => (t.scheduled ? (isFutureAppointment(t, now) ? 2 : 0) : 1);
+
+/**
+ * Orden de la fila de atención: atendiendo primero y luego los que esperan por prioridad:
+ * 1) citas cuya hora ya llegó (por su hora), 2) turnos «ahora» (por llegada), 3) citas que aún no llegan (por su hora).
+ */
+export function sortWaitingRoom(tickets: readonly Ticket[], now: Date = new Date()): Ticket[] {
   return tickets.filter((t) => isActiveStatus(t.status)).sort((a, b) => {
     if (a.status !== b.status) return a.status === 'atendiendo' ? -1 : 1;
-    const bySlot = a.slotStart.getTime() - b.slotStart.getTime();
-    return bySlot !== 0 ? bySlot : a.position - b.position;
+    if (a.status === 'atendiendo') return (a.calledAt?.getTime() ?? 0) - (b.calledAt?.getTime() ?? 0) || a.position - b.position;
+    const ga = waitingGroup(a, now), gb = waitingGroup(b, now);
+    if (ga !== gb) return ga - gb;
+    if (ga === 1) { const byArrival = a.createdAt.getTime() - b.createdAt.getTime(); if (byArrival !== 0) return byArrival; }
+    return a.slotStart.getTime() - b.slotStart.getTime() || a.position - b.position;
   });
 }
 
-/** Siguiente a llamar: el primero `en_espera` de la franja más próxima. */
-export const nextToCall = (tickets: readonly Ticket[]): Ticket | null => sortWaitingRoom(tickets).find((t) => t.status === 'en_espera') ?? null;
+/** Siguiente a llamar: el primero de la fila que se puede llamar ya. Una cita que aún no llega nunca se llama sola. */
+export const nextToCall = (tickets: readonly Ticket[], now: Date = new Date()): Ticket | null =>
+  sortWaitingRoom(tickets, now).find((t) => t.status === 'en_espera' && !isFutureAppointment(t, now)) ?? null;
+
+/** Próxima cita que todavía no llega (para decir «la siguiente es a las 10:30»). */
+export const nextAppointment = (tickets: readonly Ticket[], now: Date = new Date()): Ticket | null =>
+  sortWaitingRoom(tickets, now).find((t) => t.status === 'en_espera' && isFutureAppointment(t, now)) ?? null;
 
 /** Reducer puro: aplica un evento en vivo a la lista de turnos. */
 export function applyQueueEvent(current: readonly Ticket[], event: QueueEvent): Ticket[] {

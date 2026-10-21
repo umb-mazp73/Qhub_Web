@@ -1,4 +1,4 @@
-import type { Result } from '@qhub/core';
+import type { QueueRules, Result } from '@qhub/core';
 import type { StaffUser } from './identity';
 import type { MemberRequest, MyPermission, RequestRecord, RequestType } from './requests';
 import type { AccountKind, MemberProfile, Invitation, InvitationPreview, InviteProfile, InviteResult, Member, Membership, Organization } from './organization';
@@ -72,6 +72,9 @@ export interface TeamPort {
 export interface QueueLabelPort {
   queuePrefixes(orgId: string): Promise<Result<Record<string, string>>>;
   setQueuePrefix(orgId: string, queueId: string, prefix: string): Promise<Result<void>>;
+  /** Descansos y márgenes de la cola (los aplica el servidor al sacar turno). Sin fila = valores por defecto. */
+  queueRules(orgId: string, queueId: string): Promise<Result<QueueRules>>;
+  setQueueRules(orgId: string, queueId: string, rules: QueueRules): Promise<Result<void>>;
 }
 
 export interface StaffRepository extends AuthPort, ProfilePort, OrganizationPort, TeamPort, QueueLabelPort {}
