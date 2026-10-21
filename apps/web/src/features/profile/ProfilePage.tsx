@@ -23,7 +23,6 @@ export function ProfilePage() {
   const m = session.membership;
   return (
     <div>
-      {params.get('clave') === '1' && m && <MyPasswordDialog orgId={m.organization.id} userId={user.id} onClose={() => setParams({}, { replace: true })} />}
       <PageHead title="Mi perfil" breadcrumb="Cuenta" />
       <div className="mb-6 flex items-center gap-4">
         <Avatar text={initialsOf(user.displayName, user.email)} size="lg" />
@@ -38,27 +37,6 @@ export function ProfilePage() {
       {tab === 2 && <PreferencesTab />}
       {tab === 3 && <AccountTab />}
     </div>
-  );
-}
-
-/** Se abre desde el aviso «Tu contraseña de acceso»: muestra la contraseña asignada para copiarla y guardarla. */
-function MyPasswordDialog({ orgId, userId, onClose }: { orgId: string; userId: string; onClose: () => void }) {
-  const { staff } = useContainer();
-  const toast = useToast();
-  const q = useQuery({ queryKey: ['my-assigned-password', orgId, userId], retry: false, queryFn: async () => unwrap(await staff.memberInitialPassword(orgId, userId)) });
-  const pw = q.data ?? null;
-  return (
-    <Dialog title="Tu contraseña de acceso" onClose={onClose} actions={<Button onClick={onClose}>Listo</Button>}>
-      <div className="flex flex-col gap-3">
-        {q.isLoading ? <Skeleton height={64} /> : q.isError ? <Notice kind="error" title={friendlyError(q.error)} /> : pw ? <>
-          <p className="m-0 text-text-secondary">Mira, esta es tu contraseña. Cópiala y pégala donde la necesites; guárdala en un lugar seguro.</p>
-          <dl className="m-0 grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 border border-border-subtle bg-layer-02 p-4">
-            <dt className="t-caption text-text-secondary">Contraseña</dt><dd className="m-0"><SecretValue value={pw} /></dd>
-          </dl>
-          <div><Button kind="secondary" icon="copy" onClick={async () => { await navigator.clipboard?.writeText(pw); toast.show('Contraseña copiada.'); }}>Copiar contraseña</Button></div>
-        </> : <p className="m-0 text-text-secondary">No hay una contraseña guardada para mostrarte. Si no la recuerdas, pídele a tu administrador que te ayude a cambiarla.</p>}
-      </div>
-    </Dialog>
   );
 }
 
