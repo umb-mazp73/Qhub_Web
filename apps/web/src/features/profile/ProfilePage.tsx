@@ -114,7 +114,6 @@ function PreferencesTab() {
       </Panel>
       <Panel title="Accesibilidad">
         <div className="divide-y divide-border-subtle">
-          <Switch label="Texto más grande" hint="Aumenta el tamaño de toda la interfaz un 15 %." checked={p.largeText} onChange={(largeText) => set({ largeText })} />
           <Switch label="Reducir movimiento" hint="Quita animaciones y transiciones." checked={p.reduceMotion} onChange={(reduceMotion) => set({ reduceMotion })} />
           <Switch label="Contraste alto" hint="Refuerza bordes y textos secundarios." checked={p.highContrast} onChange={(highContrast) => set({ highContrast })} />
         </div>
